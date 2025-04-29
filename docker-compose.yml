@@ -1,0 +1,109 @@
+﻿
+services:
+  exat.ecm.lci.api: # EXAT.ECM.LCI.API
+    image: ${DOCKER_REGISTRY-}exatecmlciapi
+    build:
+      context: .
+      dockerfile: EXAT.ECM.LCI.API/Dockerfile # API ระบบงานให้คำปรึกษาด้านกฎหมาย (LCI)
+    ports:
+      - "5005:5005" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok
+      - ASPNETCORE_URLS=http://+:5005  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net   
+         
+  exat.ecm.prs.api: # EXAT.ECM.PRS.API
+    image: ${DOCKER_REGISTRY-}exatecmprsapi
+    build:
+      context: .
+      dockerfile: EXAT.ECM.PRS.API/Dockerfile  # API ระบบงานขอใช้บริการสื่อประชาสัมพันธ์ (PRS)        
+    restart: always
+    ports:
+      - "5006:5006" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      #- ORACLE_CONNECTION_STRING=User Id=sys;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=xe)));DBA Privilege=SYSDBA;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok      
+      - ASPNETCORE_URLS=http://+:5006  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net
+                         
+  exat.ecm.eon.api: # EXAT.ECM.EON.API
+    image: ${DOCKER_REGISTRY-}exatecmeonapi
+    build:
+      context: .
+      dockerfile: EXAT.ECM.EON.API/Dockerfile   # API ระบบงานแจ้งปฏิบัติการบนทางพิเศษ (EON)         
+    restart: always
+    ports:
+      - "5007:5007" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok
+      - ASPNETCORE_URLS=http://+:5007  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net
+           
+  exat.ecm.ppa.api: # EXAT.ECM.PPA.API
+    image: ${DOCKER_REGISTRY-}exatecmppaapi
+    build:
+      context: .
+      dockerfile: EXAT.ECM.PPA.API/Dockerfile  # API ระบบงานวางแผนและวิเคราะห์โครงการ (PPA)          
+    restart: always
+    ports:
+      - "5008:5008" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok
+      - ASPNETCORE_URLS=http://+:5008  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net
+         
+  exat.ecm.eer.api: # EXAT.ECM.EER.API
+    image: ${DOCKER_REGISTRY-}exatecmeerapi
+    build:
+      context: .
+      dockerfile: EXAT.ECM.EER.API/Dockerfile  # API ระบบงานขอสิทธิเปิดทางเข้า-ออก (EER)          
+    restart: always
+    ports:
+      - "5009:5009" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok
+      - ASPNETCORE_URLS=http://+:5009  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net
+                     
+  exat.ecm.k2.api: # EXAT.ECM.K2.API
+    image: ${DOCKER_REGISTRY-}exatecmk2api
+    build:
+      context: .
+      dockerfile: EXAT.ECM.K2.API/Dockerfile   # API K2          
+    restart: always
+    ports:
+      - "5011:5011" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok
+      - ASPNETCORE_URLS=http://+:5011  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net
+  
+  exat.ecm.fed.api: # EXAT.ECM.FED.API
+    image: ${DOCKER_REGISTRY-}exatecmfedapi
+    build:
+      context: .
+      dockerfile: EXAT.ECM.FED.API/Dockerfile  # API ระบบงานขอสิทธิเปิดทางเข้า-ออก (EER)          
+    restart: always
+    ports:
+      - "5012:5012" # ทำให้ port 5000 เป็น HTTP
+    environment:
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - TZ=Asia/Bangkok
+      - ASPNETCORE_URLS=http://+:5012  # ใช้ HTTP เท่านั้น
+    networks:
+      - shared_net
+networks:
+    shared_net:
+        external: true
