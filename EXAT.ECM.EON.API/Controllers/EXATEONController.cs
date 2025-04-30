@@ -1,16 +1,14 @@
 ﻿using Aspose.Words.Tables;
-using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.Helper;
-using EXAT.ECM.Business.Models;
-using EXAT.ECM.Business.Models.APIModel;
-using EXAT.ECM.Business.Models.EON;
-using EXAT.ECM.Business.Services;
-using EXAT.ECM.Business.Services.Interfaces;
+using EXAT.ECM.EON.API.Configurations;
+using EXAT.ECM.EON.API.Helper;
+using EXAT.ECM.EON.API.Models;
+using EXAT.ECM.EON.API.Models.APIModel;
+using EXAT.ECM.EON.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Oracle.ManagedDataAccess.Client;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.EON.API.Models.APIModel.ResponseModel;
 
 namespace EXAT.ECM.EON.API.Controllers
 {
@@ -77,7 +75,6 @@ namespace EXAT.ECM.EON.API.Controllers
                 return StatusCode(500, errorResponse);  // Return 500 if an error occurs
             }
         }
-
         //Test Connection DB
         [HttpGet("check-connection")]
         public IActionResult CheckDatabaseConnection()

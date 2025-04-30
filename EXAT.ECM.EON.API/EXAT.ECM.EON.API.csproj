@@ -24,4 +24,10 @@
     <ProjectReference Include="..\EXAT.ECM.Business\EXAT.ECM.Business.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="LicenseAspose\AsposeEON.lic">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

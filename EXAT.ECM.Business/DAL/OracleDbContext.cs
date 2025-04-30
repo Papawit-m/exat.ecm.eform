@@ -7,12 +7,14 @@ using EXAT.ECM.Business.Models.EER;
 using EXAT.ECM.Business.Models.FED;
 
 using Microsoft.EntityFrameworkCore;
+using EXAT.ECM.Business.Models.FED.IMPORT;
 
 namespace EXAT.ECM.Business.DAL
 {
     public class OracleDbContext : DbContext
     {
-        public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options) { }
+        public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options) 
+        { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -44,7 +46,7 @@ namespace EXAT.ECM.Business.DAL
             modelBuilder.Entity<EER_HEADER_REQUEST_REPORT>().HasNoKey();
             //modelBuilder.Entity<EER_DETAIL_REQUEST_REPORT>().HasNoKey();
             // FED
-            #endregion
+            
             modelBuilder.Entity<FED_VEHICLE_REPORT>().HasNoKey();
             modelBuilder.Entity<FED_HEADER_DAILYVEHIUSE_REPORT>().HasNoKey();
             modelBuilder.Entity<FED_DETAIL_DAILYVEHIUSE_REPORT>().HasNoKey();
@@ -58,7 +60,12 @@ namespace EXAT.ECM.Business.DAL
             modelBuilder.Entity<FED_HEADER_MachineUse_REPORT>().HasNoKey();
             modelBuilder.Entity<FED_DETAIL_MachineUse_REPORT>().HasNoKey();
 
-
+            //Import FED
+            modelBuilder.Entity<T_FED_LOGMESSAG>().HasNoKey();
+            modelBuilder.Entity<T_FED_LOGUPLOADFILE>().HasNoKey();
+            modelBuilder.Entity<T_TEMP_FED_FILE>().HasNoKey();
+            #endregion
         }
     }
 }
+    

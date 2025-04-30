@@ -1,7 +1,7 @@
-using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.DAL;
-using EXAT.ECM.Business.Services;
-using EXAT.ECM.Business.Services.Interfaces;
+using EXAT.ECM.EON.API.Configurations;
+using EXAT.ECM.EON.API.DAL;
+using EXAT.ECM.EON.API.Services;
+using EXAT.ECM.EON.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -28,6 +28,7 @@ builder.Services.AddCors(options =>
 
 
 builder.Services.AddControllers();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.Services.AddSingleton<IConfiguration>(builder.Configuration);

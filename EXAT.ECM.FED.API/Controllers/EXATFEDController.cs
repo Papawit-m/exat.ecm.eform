@@ -226,6 +226,7 @@ namespace EXAT.ECM.FED.API.Controllers
         [HttpGet("DownloadVehiUsageFED")]
         [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
         [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
+        
         public async Task<IActionResult> DownloadVehiUsageFED(
                                   [FromQuery] string? p_Parameter   //  Param ที่ใช้ใน store procedure, Concat param+val with | (pipe) ex. param1=aaa|param2=bbb
                                 , [FromQuery] string? p_FileName    //  File name ที่จะ export ออกไป
@@ -494,6 +495,58 @@ namespace EXAT.ECM.FED.API.Controllers
                 return StatusCode(500, errorResponse);  // Return 500 if an error occurs
             }
         }
-        
+        // Post: api/ImportFleetCardFED
+        [HttpPost("ImportFleetCardFED")]
+        [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
+        public async Task<IActionResult> ImportFleetCardFED(
+                                        [FromQuery] string? p_Parameter
+                                        )
+        {
+            _logger.LogInformation("Start processing ImportFleetCardFED");
+
+            System.IO.MemoryStream memoryStream = new System.IO.MemoryStream();
+            byte[] bytes = null;
+            try
+            {
+                var result = new SuccessResponse()
+                {
+                    Status = "S",
+                    StatusCode = "200",
+                    Data = string.Format("Success"),
+                };
+
+                FEDParameterModel request = new FEDParameterModel();
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                return Ok(new { message = "Imported successfully" });
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = new ErrorResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = ex.Message
+                };
+                _logger.LogError(ex, ex.Message);
+                return StatusCode(500, errorResponse);  // Return 500 if an error occurs
+            }
+        }
     }
 }

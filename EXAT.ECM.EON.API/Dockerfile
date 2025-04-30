@@ -17,24 +17,6 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-# FONTS
-COPY ["EXAT.ECM.Business/DocumentTemplate/Fonts/THSarabun Bold.ttf", "/app/DocumentTemplate/Fonts/"]
-COPY ["EXAT.ECM.Business/DocumentTemplate/Fonts/THSarabun BoldItalic.ttf", "/app/DocumentTemplate/Fonts/"]
-COPY ["EXAT.ECM.Business/DocumentTemplate/Fonts/THSarabun Italic.ttf", "/app/DocumentTemplate/Fonts/"]
-COPY ["EXAT.ECM.Business/DocumentTemplate/Fonts/THSarabun.ttf", "/app/DocumentTemplate/Fonts/"]
-
-# TEMPLATE
-#COPY ["EXAT.ECM.Business/DocumentTemplate/LCI/LCISummaryReportTemplate.docx", "/app/DocumentTemplate/LCI/"]
-#COPY ["EXAT.ECM.Business/DocumentTemplate/PRS/PRSSummaryReportTemplate.docx", "/app/DocumentTemplate/PRS/"]
-COPY ["EXAT.ECM.Business/DocumentTemplate/EON/EONSummaryReportTemplate.docx", "/app/DocumentTemplate/EON/"]
-COPY ["EXAT.ECM.Business/DocumentTemplate/EON/EONRequestFormTemplate.docx", "/app/DocumentTemplate/EON/"]
-#COPY ["EXAT.ECM.Business/DocumentTemplate/PPA/PPASummaryReportTemplate.docx", "/app/DocumentTemplate/PPA/"]
-
-##COPY ["EXAT.ECM.Business/DocumentTemplate/EER/EONSummaryReportTemplate.docx", "/app/DocumentTemplate/EER/"]
-
-# ASPOSE
-COPY ["EXAT.ECM.Business/Aspose.lic", "/app/bin/"]
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 ARG BUILD_CONFIGURATION=Release
@@ -53,3 +35,16 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "EXAT.ECM.EON.API.dll"]
+
+# FONTS
+COPY ["EXAT.ECM.EON.API/DocumentTemplate/Fonts/THSarabun Bold.ttf", "/app/DocumentTemplate/Fonts/"]
+COPY ["EXAT.ECM.EON.API/DocumentTemplate/Fonts/THSarabun BoldItalic.ttf", "/app/DocumentTemplate/Fonts/"]
+COPY ["EXAT.ECM.EON.API/DocumentTemplate/Fonts/THSarabun Italic.ttf", "/app/DocumentTemplate/Fonts/"]
+COPY ["EXAT.ECM.EON.API/DocumentTemplate/Fonts/THSarabun.ttf", "/app/DocumentTemplate/Fonts/"]
+
+# TEMPLATE
+COPY ["EXAT.ECM.EON.API/DocumentTemplate/EON/EONSummaryReportTemplate.docx", "/app/DocumentTemplate/EON/"]
+COPY ["EXAT.ECM.EON.API/DocumentTemplate/EON/EONRequestFormTemplate.docx", "/app/DocumentTemplate/EON/"]
+
+# ASPOSE
+COPY ["EXAT.ECM.EON.API/LicenseAspose/AsposeEON.lic", "/app/bin/"]

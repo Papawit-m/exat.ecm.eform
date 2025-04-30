@@ -35,6 +35,7 @@
         public string? p_TAX_INVOICE { get; set; }
         public string? p_DATE_FROM { get; set; }
         public string? p_DATE_TO { get; set; }
+        public string? p_TEMP_ID { get; set; }
 
     }
 }
