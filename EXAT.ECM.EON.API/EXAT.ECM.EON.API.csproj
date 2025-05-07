@@ -21,7 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EXAT.ECM.Business\EXAT.ECM.Business.csproj" />
+    <PackageReference Include="Aspose.Words" Version="25.1.0" />
+    <PackageReference Include="EPPlus" Version="8.0.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Oracle.EntityFrameworkCore" Version="7.21.13" />
   </ItemGroup>
 
   <ItemGroup>
