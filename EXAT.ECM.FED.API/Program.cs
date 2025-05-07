@@ -1,7 +1,7 @@
-using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.DAL;
-using EXAT.ECM.Business.Services;
-using EXAT.ECM.Business.Services.Interfaces;
+using EXAT.ECM.FED.API.Configurations;
+using EXAT.ECM.FED.API.DAL;
+using EXAT.ECM.FED.API.Services;
+using EXAT.ECM.FED.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 

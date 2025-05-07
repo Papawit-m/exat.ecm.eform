@@ -1,8 +1,8 @@
 ﻿using Aspose.Words.Bibliography;
-using EXAT.ECM.Business.Models.LCI;
-using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.Helper;
-using EXAT.ECM.Business.Models.APIModel;
+using EXAT.ECM.LCI.API.Models;
+using EXAT.ECM.LCI.API.Configurations;
+using EXAT.ECM.LCI.API.Helper;
+using EXAT.ECM.LCI.API.Models.APIModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +13,11 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Net;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.LCI.API.Models.APIModel.ResponseModel;
 using Microsoft.EntityFrameworkCore;
-using EXAT.ECM.Business.Services.Interfaces;
-using EXAT.ECM.Business.Services;
+using EXAT.ECM.LCI.API.Services.Interfaces;
+using EXAT.ECM.LCI.API.Services;
 using System.Reflection;
-using EXAT.ECM.Business.Models;
 using System.Configuration;
 
 namespace EXAT.ECM.LCI.API.Controllers

@@ -1,16 +1,15 @@
-﻿using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.Helper;
-using EXAT.ECM.Business.Models;
-using EXAT.ECM.Business.Models.APIModel;
-using EXAT.ECM.Business.Models.PRS;
-using EXAT.ECM.Business.Services.Interfaces;
+﻿using EXAT.ECM.PRS.API.Configurations;
+using EXAT.ECM.PRS.API.Helper;
+using EXAT.ECM.PRS.API.Models;
+using EXAT.ECM.PRS.API.Models.APIModel;
+using EXAT.ECM.PRS.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Oracle.ManagedDataAccess.Client;
 using System.Collections.Generic;
 using System.Diagnostics;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.PRS.API.Models.APIModel.ResponseModel;
 
 namespace EXAT.ECM.PRS.API.Controllers
 {

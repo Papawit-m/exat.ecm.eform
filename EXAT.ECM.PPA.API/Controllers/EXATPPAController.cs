@@ -1,13 +1,12 @@
-﻿using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.Helper;
-using EXAT.ECM.Business.Models;
-using EXAT.ECM.Business.Models.APIModel;
-using EXAT.ECM.Business.Models.PPA;
-using EXAT.ECM.Business.Services.Interfaces;
+﻿using EXAT.ECM.PPA.API.Configurations;
+using EXAT.ECM.PPA.API.Helper;
+using EXAT.ECM.PPA.API.Models;
+using EXAT.ECM.PPA.API.Models.APIModel;
+using EXAT.ECM.PPA.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.PPA.API.Models.APIModel.ResponseModel;
 
 namespace EXAT.ECM.PPA.API.Controllers
 {

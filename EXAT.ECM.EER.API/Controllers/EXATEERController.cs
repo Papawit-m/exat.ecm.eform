@@ -1,11 +1,10 @@
 ﻿
-using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.Helper;
-using EXAT.ECM.Business.Models;
-using EXAT.ECM.Business.Models.APIModel;
-using EXAT.ECM.Business.Models.EER;
-using EXAT.ECM.Business.Services;
-using EXAT.ECM.Business.Services.Interfaces;
+using EXAT.ECM.EER.API.Configurations;
+using EXAT.ECM.EER.API.Helper;
+using EXAT.ECM.EER.API.Models;
+using EXAT.ECM.EER.API.Models.APIModel;
+using EXAT.ECM.EER.API.Services;
+using EXAT.ECM.EER.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.EER.API.Models.APIModel.ResponseModel;
 
 namespace EXAT.ECM.EER.API.Controllers
 {

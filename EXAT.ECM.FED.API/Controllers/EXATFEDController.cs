@@ -1,17 +1,16 @@
 ﻿
-using EXAT.ECM.Business.Configurations;
-using EXAT.ECM.Business.Helper;
-using EXAT.ECM.Business.Models;
-using EXAT.ECM.Business.Models.APIModel;
-using EXAT.ECM.Business.Models.FED;
-using EXAT.ECM.Business.Services.Interfaces;
+using EXAT.ECM.FED.API.Configurations;
+using EXAT.ECM.FED.API.Helper;
+using EXAT.ECM.FED.API.Models;
+using EXAT.ECM.FED.API.Models.APIModel;
+using EXAT.ECM.FED.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Diagnostics;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.FED.API.Models.APIModel.ResponseModel;
 using System.Text.Json; // ต้องเพิ่มที่ด้านบนของไฟล์
 namespace EXAT.ECM.FED.API.Controllers
 {

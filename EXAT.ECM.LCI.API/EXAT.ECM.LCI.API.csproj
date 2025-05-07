@@ -28,6 +28,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Models\APIModel\RequestModel.cs" />
+    <Compile Include="Models\APIModel\ResponseModel.cs" />
+    <Compile Include="Models\LCIParameterModel.cs" />
+    <Compile Include="Models\LCI_HEADER_REQUEST_REPORT.cs" />
+    <Compile Include="Models\LCI_HEADER_SUMMARY_REPORT.cs" />
+    <Compile Include="Models\Utilities.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.Platforms" Version="1.1.0" />
     <PackageReference Include="Microsoft.NETCore.Targets" Version="1.1.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
@@ -36,7 +45,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EXAT.ECM.Business\EXAT.ECM.Business.csproj" />
+    <PackageReference Include="Aspose.Words" Version="25.1.0" />
+    <PackageReference Include="EPPlus" Version="8.0.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Oracle.EntityFrameworkCore" Version="7.21.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="LicenseAspose\AsposeLCI.Total.NET.lic">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

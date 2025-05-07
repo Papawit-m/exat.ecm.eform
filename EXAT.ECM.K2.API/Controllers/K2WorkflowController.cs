@@ -1,9 +1,9 @@
-﻿using EXAT.ECM.Business.Models.APIModel;
+﻿using EXAT.ECM.K2.API.Models.APIModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
-using static EXAT.ECM.Business.Models.APIModel.ResponseModel;
+using static EXAT.ECM.K2.API.Models.APIModel.ResponseModel;
 
 namespace EXAT.ECM.K2.API.Controllers
 {

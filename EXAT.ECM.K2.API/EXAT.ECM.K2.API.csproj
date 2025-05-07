@@ -20,8 +20,5 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\EXAT.ECM.Business\EXAT.ECM.Business.csproj" />
-  </ItemGroup>
 
 </Project>
