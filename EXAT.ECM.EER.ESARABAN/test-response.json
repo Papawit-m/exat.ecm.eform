@@ -1,0 +1,23 @@
+﻿{
+    "success":  true,
+    "message":  "เอกสารถูกสร้างสำเร็จ",
+    "data":  {
+                 "status":  "S",
+                 "statusCode":  "200",
+                 "message":  "Success: generate book.",
+                 "book_id":  "CF915607A99C40A99B3EC839F4D72C92",
+                 "book_code":  "APV-20251030-7764",
+                 "book_subject":  "ทดสอบสรางเอกสารผาน K2 SmartObject",
+                 "book_to":  "ผอำนวยการใหญ",
+                 "registrationbook_id":  "E1786792382247A49DD27072718DB187",
+                 "parent_bookid":  "PARENT_BOOK_001",
+                 "parent_orgid":  "ORG_456",
+                 "parent_positionname":  "ผจดการฝายบรหาร",
+                 "booktype_id":  93,
+                 "created_by":  "EXAT\\ECMUSR07",
+                 "created_date":  "2025-10-30T20:06:02.4614123+07:00"
+             },
+    "error":  null,
+    "errorCode":  null,
+    "timestamp":  "2025-10-30T13:06:02.4614343Z"
+}

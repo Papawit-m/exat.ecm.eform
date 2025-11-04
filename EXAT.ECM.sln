@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXAT.ECM.FED.API", "EXAT.EC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXAT.ECM.EService.API", "EXAT.ECM.EService.API\EXAT.ECM.EService.API.csproj", "{E03BEF61-145F-403B-8E43-BC8F23225B29}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXAT.ECM.EER.ESARABAN", "EXAT.ECM.EER.ESARABAN\EXAT.ECM.EER.ESARABAN.csproj", "{CEBC9F1F-9A75-419A-B0D1-CE1C8D8BE4D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,10 @@ Global
 		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEBC9F1F-9A75-419A-B0D1-CE1C8D8BE4D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEBC9F1F-9A75-419A-B0D1-CE1C8D8BE4D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEBC9F1F-9A75-419A-B0D1-CE1C8D8BE4D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEBC9F1F-9A75-419A-B0D1-CE1C8D8BE4D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
