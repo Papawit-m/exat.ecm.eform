@@ -13,20 +13,29 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>f3136c8b-0bb2-4cf9-9bcf-ff5b3a09545d</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+
+    <!-- ให้มี target net8.0/linux-x64 ใน project.assets.json -->
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <!-- VS Container tooling (คงตัวล่าสุดตัวเดียว) -->
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
-  </ItemGroup>
 
-<ItemGroup>
+    <!-- Swagger -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+
+    <!-- เอกสาร/Excel/DB -->
     <PackageReference Include="Aspose.Words" Version="25.1.0" />
     <PackageReference Include="EPPlus" Version="8.0.2" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="7.21.13" />
+
+    <!-- รองรับ Skia/เรนเดอร์ภาพบน Debian (aspnet:8.0) -->
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
   </ItemGroup>
 
   <ItemGroup>

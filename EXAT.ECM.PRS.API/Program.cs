@@ -15,6 +15,9 @@ builder.Services.AddScoped<IPRSService, PRSService>();
 builder.Services.AddDbContext<OracleDbContext>(options =>
     options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
 
+//builder.Services.AddDbContext<OracleDbContext>(options =>
+//        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+
 //AllowAllOrigins //AllowAll
 builder.Services.AddCors(options =>
 {

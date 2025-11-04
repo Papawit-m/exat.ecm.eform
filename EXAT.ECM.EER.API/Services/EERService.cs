@@ -185,10 +185,41 @@ namespace EXAT.ECM.EER.API.Services
                                         );
                                     END;",
                     new OracleParameter("p_REQUEST_ID", request.p_REQUEST_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_ITEM_ID", request.p_ITEM_ID ?? (object)DBNull.Value),
                     new OracleParameter("p_OUTPUT", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
                )
                 .ToListAsync();
             return result;
+        }
+
+        //EER INSERT DOCUMENT TO DB
+        public async Task<ImportResult> InserDocumentRequest(EERParameterModel request,string base64String)
+        {
+            var results = new ImportResult();
+            try
+            {
+                var result = await _oracleContext.Database.ExecuteSqlRawAsync(@"
+                    BEGIN
+                        EFM_EER.SP_6001_INSERT_FILES(
+                            :p_REQUEST_ID,
+                            :p_ITEM_ID,
+                            :p_FILE_CONTENT
+                        );
+                    END;",
+                        new OracleParameter("p_REQUEST_ID", OracleDbType.Varchar2, request.p_REQUEST_ID ?? (object)DBNull.Value, ParameterDirection.Input),
+                        new OracleParameter("p_ITEM_ID", OracleDbType.Varchar2, request.p_ITEM_ID ?? (object)DBNull.Value, ParameterDirection.Input),
+                        new OracleParameter("p_FILE_CONTENT", OracleDbType.NClob, base64String ?? (object)DBNull.Value, ParameterDirection.Input)
+                        );
+
+                results.Status = "S";
+                results.Message = "Success";
+            }
+            catch (Exception ex)
+            {
+                results.Status = "E";
+                results.Message = ex.Message;
+            }
+            return results;
         }
     }
 }

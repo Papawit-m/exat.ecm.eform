@@ -70,7 +70,7 @@ namespace EXAT.ECM.PPA.API.Services
                     .Set<PPA_HEADER_SUMMARY_REPORT>()
                    .FromSqlRaw(@"
                                     BEGIN 
-                                        EFM_PPA.SP_7003_GETDATA_HEADER_SUMMARY_REPORT (
+                                        EFM_PPA.SP_7003_GET_HEADER_SUM_REPORT (
                                             :p_DOCNO, 
                                             :p_PROJECT_NAME, 
                                             :p_PROJECTSECRETARY_BY, 

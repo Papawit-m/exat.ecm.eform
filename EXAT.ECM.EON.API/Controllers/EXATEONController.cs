@@ -41,7 +41,7 @@ namespace EXAT.ECM.EON.API.Controllers
             _asposeOption = asposeOption.Value;
             _environment = environment;
             _eonService = eonService;
-            _connectionString = configuration.GetConnectionString("OracleConnection");
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
         }
         // GET: api/TestConnection
         [HttpGet("TestConnection")]
@@ -75,6 +75,7 @@ namespace EXAT.ECM.EON.API.Controllers
                 return StatusCode(500, errorResponse);  // Return 500 if an error occurs
             }
         }
+        
         //Test Connection DB
         [HttpGet("check-connection")]
         public IActionResult CheckDatabaseConnection()

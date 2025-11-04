@@ -1,42 +1,55 @@
-using EXAT.ECM.FED.API.Configurations;
+﻿using EXAT.ECM.FED.API.Configurations;
 using EXAT.ECM.FED.API.DAL;
 using EXAT.ECM.FED.API.Services;
 using EXAT.ECM.FED.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---------- Options ----------
 builder.Services.Configure<AsposeOption>(builder.Configuration.GetSection(AsposeOption.Asposes));
 
-// Add services to the container.
+// ---------- Caching----------
+builder.Services.AddMemoryCache(); 
+
+// ---------- DI Services ----------
 builder.Services.AddScoped<IFEDService, FEDService>();
+builder.Services.AddScoped<IFleetCardRepository, FleetCardRepository>();
+builder.Services.AddScoped<ILoggingService, DbLoggingService>();
+builder.Services.AddScoped<IConfigService, ConfigServiceTemplateImportBankFED>();
+
+// ---------- DbContext ----------
+//builder.Services.AddDbContext<OracleDbContext>(options =>
+//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+
+// Env var:
 
 builder.Services.AddDbContext<OracleDbContext>(options =>
-    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+    options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
 
-//AllowAllOrigins //AllowAll
+// ---------- CORS ----------
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
+// ---------- EPPlus License ----------
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
+// ---------- MVC / Swagger ----------
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
-builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ---------- Middleware pipeline ----------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -45,6 +58,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// ถ้ามี Auth ค่อยเปิดบรรทัดนี้ก่อน Authorization
+// app.UseAuthentication();
+
+app.UseCors("AllowAll");       
 app.UseAuthorization();
 
 app.MapControllers();

@@ -26,7 +26,8 @@
         public string? TIME_END_STAFF { get; set; }
         public string? SIGNER_APPROVAL_3 { get; set; }
         public string? NAME_APPROVAL_3 { get; set; }
-        public string? OPERATIONCHECKLIST { get; set; }
+        public string? POS_APPROVAL_3 { get; set; }
+        public string? OPERATIONCHECKLIST_DESC { get; set; }
         public string? SIGNER_APPROVAL_4 { get; set; }
         public string? NAME_APPROVAL_4 { get; set; }
     }

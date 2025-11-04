@@ -1,5 +1,7 @@
 ﻿using System.Data;
 using System.Reflection;
+using System.Text;
+using System.Web;
 
 namespace EXAT.ECM.FED.API.Models
 {
@@ -13,7 +15,7 @@ namespace EXAT.ECM.FED.API.Models
 
         public static string AsposeFontsPath { get; set; }
 
-        public DataTable ToDataTable<T>(List<T> items)
+        public static DataTable ToDataTable<T>(List<T> items)
         {
             DateTime _date_start = DateTime.Now;
 
@@ -22,8 +24,11 @@ namespace EXAT.ECM.FED.API.Models
             PropertyInfo[] Props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
             foreach (PropertyInfo prop in Props)
             {
-                //Setting column names as Property names
-                dataTable.Columns.Add(prop.Name);
+                if (!dataTable.Columns.Contains(prop.Name)) // ✅ เช็กชื่อซ้ำก่อน
+                {
+                    //Setting column names as Property names
+                    dataTable.Columns.Add(prop.Name);
+                }
             }
             foreach (T item in items)
             {
@@ -95,5 +100,81 @@ namespace EXAT.ECM.FED.API.Models
             return result;
 
         }
+        public static class ClobBinaryDecoder
+        {
+            private static readonly char[] TrimChars = new[] { '\r', '\n', '\t', ' ' };
+
+            public static bool TryDecodeBase64Flexible(string? input, out byte[] bytes, out string? error)
+            {
+                bytes = Array.Empty<byte>();
+                error = null;
+
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    error = "CLOB is null/empty.";
+                    return false;
+                }
+
+                try
+                {
+                    // 1) URL-decode เผื่อส่งผ่าน query/form โดยไม่ encode
+                    var s = HttpUtility.UrlDecode(input) ?? input;
+
+                    // 2) ตัด prefix data:*;base64, ถ้ามี
+                    if (s.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var idx = s.IndexOf(',');
+                        if (idx >= 0) s = s[(idx + 1)..];
+                    }
+
+                    // 3) Trim และลบ whitespace แทรก
+                    s = s.Trim(TrimChars);
+                    var sb = new StringBuilder(s.Length);
+                    foreach (var c in s)
+                    {
+                        if (c == '\r' || c == '\n' || c == '\t' || c == ' ')
+                            continue;
+                        sb.Append(c);
+                    }
+                    s = sb.ToString();
+
+                    // 4) URL-safe → standard
+                    s = s.Replace('-', '+').Replace('_', '/');
+
+                    // 5) เติม padding
+                    var mod4 = s.Length % 4;
+                    if (mod4 == 1)
+                    {
+                        error = "Invalid base64 length %4 == 1";
+                        return false;
+                    }
+                    if (mod4 > 0) s = s.PadRight(s.Length + (4 - mod4), '=');
+
+                    #if NET5_0_OR_GREATER
+                    var maxLen = (s.Length * 3) / 4;
+                    bytes = new byte[maxLen];
+                    if (Convert.TryFromBase64String(s, bytes, out var written))
+                    {
+                        if (written != bytes.Length) Array.Resize(ref bytes, written);
+                        return true;
+                    }
+                    error = "TryFromBase64String failed.";
+                    bytes = Array.Empty<byte>();
+                    return false;
+                    #else
+                                bytes = Convert.FromBase64String(s);
+                                return true;
+                    #endif
+                }
+                catch (Exception ex)
+                {
+                    error = $"Base64 decode threw: {ex.Message}";
+                    bytes = Array.Empty<byte>();
+                    return false;
+                }
+            }
+        }
+
+
     }
 }

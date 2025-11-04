@@ -12,8 +12,11 @@ builder.Services.Configure<AsposeOption>(builder.Configuration.GetSection(Aspose
 // Add services to the container.
 builder.Services.AddScoped<ILCIService, LCIService>();
 
+//builder.Services.AddDbContext<OracleDbContext>(options =>
+//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
 builder.Services.AddDbContext<OracleDbContext>(options =>
-    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING"))
+    );
 
 //AllowAllOrigins //AllowAll
 builder.Services.AddCors(options =>

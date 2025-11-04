@@ -45,6 +45,7 @@ namespace EXAT.ECM.PRS.API.Controllers
             _environment = environment;
             _prsService = prsService;
             _connectionString = configuration.GetConnectionString("OracleConnection");
+            //_connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
         }
         // GET: api/TestConnection
         [HttpGet("TestConnection")]
@@ -53,6 +54,8 @@ namespace EXAT.ECM.PRS.API.Controllers
         public ActionResult TestConnection()
         {
             _logger.LogInformation("Start processing TestConnection");
+
+            
 
             try
             {

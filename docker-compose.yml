@@ -8,7 +8,8 @@ services:
     ports:
       - "5005:5005" # ทำให้ port 5000 เป็น HTTP
     environment:
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok
       - ASPNETCORE_URLS=http://+:5005  # ใช้ HTTP เท่านั้น
     networks:
@@ -23,8 +24,8 @@ services:
     ports:
       - "5006:5006" # ทำให้ port 5000 เป็น HTTP
     environment:
-      #- ORACLE_CONNECTION_STRING=User Id=sys;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=xe)));DBA Privilege=SYSDBA;
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok      
       - ASPNETCORE_URLS=http://+:5006  # ใช้ HTTP เท่านั้น
     networks:
@@ -39,7 +40,8 @@ services:
     ports:
       - "5007:5007" # ทำให้ port 5000 เป็น HTTP
     environment:
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok
       - ASPNETCORE_URLS=http://+:5007  # ใช้ HTTP เท่านั้น
     networks:
@@ -54,7 +56,8 @@ services:
     ports:
       - "5008:5008" # ทำให้ port 5000 เป็น HTTP
     environment:
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok
       - ASPNETCORE_URLS=http://+:5008  # ใช้ HTTP เท่านั้น
     networks:
@@ -69,7 +72,8 @@ services:
     ports:
       - "5009:5009" # ทำให้ port 5000 เป็น HTTP
     environment:
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok
       - ASPNETCORE_URLS=http://+:5009  # ใช้ HTTP เท่านั้น
     networks:
@@ -84,7 +88,8 @@ services:
     ports:
       - "5011:5011" # ทำให้ port 5000 เป็น HTTP
     environment:
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok
       - ASPNETCORE_URLS=http://+:5011  # ใช้ HTTP เท่านั้น
     networks:
@@ -99,7 +104,8 @@ services:
     ports:
       - "5012:5012" # ทำให้ port 5000 เป็น HTTP
     environment:
-      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600;
+      - ORACLE_CONNECTION_STRING=User Id=system;Password=P@ssw0rd;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.11.79)(PORT=1521)))(CONNECT_DATA=(SID=XE)));Connect Timeout=600; #CDS
+      #- ORACLE_CONNECTION_STRING=User Id=SYS;Password=Aa12345*;Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.20.1.176)(PORT=1521)))(CONNECT_DATA=(SID=ecmdev)));DBA Privilege=SYSDBA;Connect Timeout=120; #Customer
       - TZ=Asia/Bangkok
       - ASPNETCORE_URLS=http://+:5012  # ใช้ HTTP เท่านั้น
     networks:

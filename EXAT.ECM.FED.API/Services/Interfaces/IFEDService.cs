@@ -1,4 +1,5 @@
 ﻿using EXAT.ECM.FED.API.Models;
+using EXAT.ECM.FED.API.Models.IMPORT;
 namespace EXAT.ECM.FED.API.Services.Interfaces
 {
     public interface IFEDService
@@ -17,5 +18,11 @@ namespace EXAT.ECM.FED.API.Services.Interfaces
         Task<FED_INCOMPT_FUEL_TAXINV> GetIncomptFuelTaxinvFormAsync(FEDParameterModel request);
         //FUELFLEETCARD REPORT
         Task<FuelFleetCard> GetFuelFleetCardFormAsync(FEDParameterModel request);
+        //Import Feed card
+        Task<ImportResult> ImportFileExcelFED(FEDParameterModel request);
+        //DownloadErrorExcel
+        Task<T_TEMP_FED_IMPORT_FLEETCARD_ERROR> DownloadErrorExcel(FEDParameterModel request);
+
+        Task<ImportResultBankFED<Dictionary<string, string?>>> ImportTransactionsAsync(FEDParameterModel request);
     }
 }

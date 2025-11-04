@@ -7,6 +7,6 @@
         public string? P_REQUEST_DOCDATE_FROM { get; set; }
         public string? P_REQUEST_DOCDATE_TO { get; set; }
         public string? p_REQUEST_ID { get; set; }
-        
+        public string? p_ITEM_ID { get; set; }
     }
 }

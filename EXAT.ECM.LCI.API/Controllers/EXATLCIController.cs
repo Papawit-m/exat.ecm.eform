@@ -22,8 +22,8 @@ using System.Configuration;
 
 namespace EXAT.ECM.LCI.API.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class EXATLCIController : ControllerBase
     {
         private readonly ILogger<EXATLCIController> _logger;
@@ -53,7 +53,8 @@ namespace EXAT.ECM.LCI.API.Controllers
             _asposeOption = asposeOption.Value;
             _environment = environment;
             _lciService = lciService;
-            _connectionString = configuration.GetConnectionString("OracleConnection");
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
 
 
         }
@@ -193,6 +194,8 @@ namespace EXAT.ECM.LCI.API.Controllers
 
                     replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                     replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
+
                     document.Save(memoryStream, p_FileName);
                 }
                 if (p_Template == "LCIRequestFormTemplate")

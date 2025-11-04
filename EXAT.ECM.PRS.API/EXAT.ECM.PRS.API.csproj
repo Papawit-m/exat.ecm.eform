@@ -16,8 +16,14 @@
     <ApplicationIcon />
     <OutputType>Exe</OutputType>
     <StartupObject />
+
+    <!-- ให้มี target net8.0/linux-x64 ตอน restore/publish -->
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
+  <!-- ถ้าจะคุมไม่ให้รวมไฟล์ DocumentTemplate เข้า publish (คัดลอกผ่าน Dockerfile อยู่แล้ว) -->
   <ItemGroup>
     <Compile Remove="DocumentTemplate\**" />
     <Content Remove="DocumentTemplate\**" />
@@ -26,16 +32,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- VS Container tooling (คงตัวล่าสุดตัวเดียว) -->
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
-  </ItemGroup>
 
-  <ItemGroup>
+    <!-- Swagger -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+
+    <!-- เอกสาร/Excel/DB -->
     <PackageReference Include="Aspose.Words" Version="25.1.0" />
     <PackageReference Include="EPPlus" Version="8.0.2" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="7.21.13" />
+
+    <!-- รองรับ Skia/เรนเดอร์ภาพบน Debian (aspnet:8.0) -->
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
   </ItemGroup>
 
   <ItemGroup>

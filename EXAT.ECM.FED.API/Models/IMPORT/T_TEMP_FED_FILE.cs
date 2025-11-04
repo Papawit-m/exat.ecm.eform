@@ -1,14 +1,15 @@
-﻿namespace EXAT.ECM.FED.API.Models.MPORT
+﻿namespace EXAT.ECM.FED.API.Models.IMPORT
 {
     public class T_TEMP_FED_FILE
     {
-        #region property
-        public Guid? TEMP_ID { get; set; } 
-        public Guid? HEADERID { get; set; }
+        
+        public string TEMP_ID { get; set; } 
+        public string HEADER_ID { get; set; }
         public string FILE_NAME { get; set; }
         public string FILE_CONTENT { get; set; }
+        public string CONTENT_VALUE { get; set; }        
         public string CREATE_BY { get; set; }
-        public DateTime? CREATE_DATE { get; set; }
-        #endregion
+        public string CREATE_DATE { get; set; }
+        
     }
 }

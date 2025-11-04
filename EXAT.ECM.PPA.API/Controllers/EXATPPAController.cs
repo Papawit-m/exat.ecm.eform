@@ -6,6 +6,7 @@ using EXAT.ECM.PPA.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Oracle.ManagedDataAccess.Client;
 using static EXAT.ECM.PPA.API.Models.APIModel.ResponseModel;
 
 namespace EXAT.ECM.PPA.API.Controllers
@@ -18,6 +19,7 @@ namespace EXAT.ECM.PPA.API.Controllers
         private readonly AsposeOption _asposeOption;
         private readonly IWebHostEnvironment _environment;
         private readonly IPPAService _ppaService;
+        private readonly string _connectionString;
 
         private string PPASummaryReportTemplate = "DocumentTemplate/PPA/PPASummaryReportTemplate.docx";
 
@@ -25,6 +27,7 @@ namespace EXAT.ECM.PPA.API.Controllers
                                    , IOptions<AsposeOption> asposeOption
                                    , IWebHostEnvironment environment
                                    , IPPAService ppaService
+                                   , IConfiguration configuration
                                    )
         {
             _logger = logger;
@@ -36,6 +39,7 @@ namespace EXAT.ECM.PPA.API.Controllers
             _asposeOption = asposeOption.Value;
             _environment = environment;
             _ppaService = ppaService;
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
         }
         // GET: api/TestConnection
         [HttpGet("TestConnection")]
@@ -70,6 +74,29 @@ namespace EXAT.ECM.PPA.API.Controllers
             }
         }
 
+        //Test Connection DB
+        [HttpGet("check-connection")]
+        public IActionResult CheckDatabaseConnection()
+        {
+            try
+            {
+                using (var connection = new OracleConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    string dbName = "";
+                    using (var command = new OracleCommand("SELECT sys_context('USERENV', 'DB_NAME') FROM dual", connection))
+                    {
+                        dbName = command.ExecuteScalar()?.ToString();
+                    }
+                    return Ok(new { status = "✅ Connection Successful!", database = dbName });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { status = "❌ Connection Failed", error = ex.Message });
+            }
+        }
 
         // GET: api/DownloadPrintFormPPA
         [HttpGet("DownloadPrintFormPPA")]
@@ -140,6 +167,7 @@ namespace EXAT.ECM.PPA.API.Controllers
 
                 replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                 replacWords.ReplaceNodeText(document, d_header);
+                replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
 
                 document.Save(memoryStream, p_FileName);
 

@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EXAT.ECM.K2.API", "EXAT.ECM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXAT.ECM.FED.API", "EXAT.ECM.FED.API\EXAT.ECM.FED.API.csproj", "{74159407-7927-46C7-B764-5B683C2B6550}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EXAT.ECM.EService.API", "EXAT.ECM.EService.API\EXAT.ECM.EService.API.csproj", "{E03BEF61-145F-403B-8E43-BC8F23225B29}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,41 +65,15 @@ Global
 		{74159407-7927-46C7-B764-5B683C2B6550}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74159407-7927-46C7-B764-5B683C2B6550}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74159407-7927-46C7-B764-5B683C2B6550}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E03BEF61-145F-403B-8E43-BC8F23225B29}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {52A4BB6F-558E-47AD-97FE-A24A8FF4BFBD}
-	EndGlobalSection
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 9
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = http://cdssolution.no-ip.org:8080/tfs/k2
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = EXAT.ECM.Business\\EXAT.ECM.Business.csproj
-		SccProjectName1 = EXAT.ECM.Business
-		SccLocalPath1 = EXAT.ECM.Business
-		SccProjectUniqueName2 = EXAT.ECM.EER.API\\EXAT.ECM.EER.API.csproj
-		SccProjectName2 = EXAT.ECM.EER.API
-		SccLocalPath2 = EXAT.ECM.EER.API
-		SccProjectUniqueName3 = EXAT.ECM.EON.API\\EXAT.ECM.EON.API.csproj
-		SccProjectName3 = EXAT.ECM.EON.API
-		SccLocalPath3 = EXAT.ECM.EON.API
-		SccProjectUniqueName4 = EXAT.ECM.K2.API\\EXAT.ECM.K2.API.csproj
-		SccProjectName4 = EXAT.ECM.K2.API
-		SccLocalPath4 = EXAT.ECM.K2.API
-		SccProjectUniqueName5 = EXAT.ECM.LCI.API\\EXAT.ECM.LCI.API.csproj
-		SccProjectName5 = EXAT.ECM.LCI.API
-		SccLocalPath5 = EXAT.ECM.LCI.API
-		SccProjectUniqueName6 = EXAT.ECM.PPA.API\\EXAT.ECM.PPA.API.csproj
-		SccProjectName6 = EXAT.ECM.PPA.API
-		SccLocalPath6 = EXAT.ECM.PPA.API
-		SccProjectUniqueName7 = EXAT.ECM.PRS.API\\EXAT.ECM.PRS.API.csproj
-		SccProjectName7 = EXAT.ECM.PRS.API
-		SccLocalPath7 = EXAT.ECM.PRS.API
-		SccProjectUniqueName8 = EXAT.ECM.FED.API\\EXAT.ECM.FED.API.csproj
-		SccProjectName8 = EXAT.ECM.FED.API
-		SccLocalPath8 = EXAT.ECM.FED.API
 	EndGlobalSection
 EndGlobal

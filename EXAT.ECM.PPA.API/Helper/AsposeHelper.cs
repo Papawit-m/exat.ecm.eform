@@ -93,10 +93,15 @@ namespace EXAT.ECM.PPA.API.Helper
         {
             /// TODO:: Load Fonts custom
             string licensePath = string.Format("{0}/{1}", this._environment.ContentRootPath, _asposeOption.LicensePath);
+            
+            if (!File.Exists(licensePath))
+                throw new FileNotFoundException("Aspose License file not found", licensePath);
 
             Aspose.Words.License lic = new Aspose.Words.License();
             using (System.IO.FileStream fs = System.IO.File.OpenRead(licensePath))
-            { lic.SetLicense(fs); }
+            { 
+                lic.SetLicense(fs); 
+            }
         }
 
         #region ReplaceWithHtml

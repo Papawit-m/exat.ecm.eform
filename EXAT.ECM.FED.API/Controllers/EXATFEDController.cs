@@ -11,19 +11,35 @@ using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Diagnostics;
 using static EXAT.ECM.FED.API.Models.APIModel.ResponseModel;
-using System.Text.Json; // ต้องเพิ่มที่ด้านบนของไฟล์
+using System.Text.Json;
+using System.IO;
+using OfficeOpenXml;
+using Oracle.ManagedDataAccess.Client;
+using EXAT.ECM.FED.API.Models.IMPORT;
+using EXAT.ECM.FED.API.DAL;
+using System.Data; 
 namespace EXAT.ECM.FED.API.Controllers
 {
+    [ApiController]
+    [Route("api/[controller]")]
     public class EXATFEDController : Controller
     {
         private readonly ILogger<EXATFEDController> _logger;
         private readonly AsposeOption _asposeOption;
         private readonly IWebHostEnvironment _environment;
         private readonly IFEDService _fedService;
+        private readonly string _connectionString;
+        private readonly ILoggingService _loggingService;
+        private readonly OracleDbContext _oracleContext;
+        private readonly IFleetCardRepository _repository;
+
         public EXATFEDController(ILogger<EXATFEDController> logger
                                   , IOptions<AsposeOption> asposeOption
                                   , IWebHostEnvironment environment
                                   , IFEDService fedService
+                                  , IConfiguration configuration
+                                  ,ILoggingService loggingService
+                                  ,IFleetCardRepository repository
                                   )
         {
             _logger = logger;
@@ -35,6 +51,10 @@ namespace EXAT.ECM.FED.API.Controllers
             _asposeOption = asposeOption.Value;
             _environment = environment;
             _fedService = fedService;
+            _loggingService = loggingService;
+            _repository = repository;
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
         }
         private string VehicleRequestTemplate = "DocumentTemplate/FED/VehicleRequestTemplate.docx"; 
         private string DailyVehiuseTemplate = "DocumentTemplate/FED/FEDDailyVehiUsageTemplate.docx";
@@ -45,6 +65,65 @@ namespace EXAT.ECM.FED.API.Controllers
         private string FEDPoliceFuelExceedTemplate = "DocumentTemplate/FED/FEDPoliceFuelExceedTemplate.docx";
         private string FEDIncomptFuelTaxInvTemplate = "DocumentTemplate/FED/FEDIncomptFuelTaxInvTemplate.docx";
         private string FEDFuelFleetCardTemplate = "DocumentTemplate/FED/FEDFuelFleetCardTemplate.docx";
+        private object stackTrace;
+
+        // GET: api/TestConnection
+        [HttpGet("TestConnection")]
+        [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
+        public ActionResult TestConnection()
+        {
+            _logger.LogInformation("Start processing TestConnection");
+
+            try
+            {
+                var result = new SuccessResponse()
+                {
+                    Status = "S",
+                    StatusCode = "200",
+                    Data = string.Format("Success"),
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = new ErrorResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = ex.Message
+                };
+
+                _logger.LogError(ex, ex.Message);
+                return StatusCode(500, errorResponse);  // Return 500 if an error occurs
+            }
+        }
+
+        //Test Connection DB
+        [HttpGet("check-connection")]
+        public IActionResult CheckDatabaseConnection()
+        {
+            try
+            {
+                using (var connection = new OracleConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    string dbName = "";
+                    using (var command = new OracleCommand("SELECT sys_context('USERENV', 'DB_NAME') FROM dual", connection))
+                    {
+                        dbName = command.ExecuteScalar()?.ToString();
+                    }
+                    return Ok(new { status = "✅ Connection Successful!", database = dbName });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { status = "❌ Connection Failed", error = ex.Message });
+            }
+        }
+
         // GET: api/DownloadPrintFormFED
         [HttpGet("DownloadPrintFormFED")]
         [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
@@ -494,11 +573,13 @@ namespace EXAT.ECM.FED.API.Controllers
                 return StatusCode(500, errorResponse);  // Return 500 if an error occurs
             }
         }
-        // Post: api/ImportFleetCardFED
-        [HttpPost("ImportFleetCardFED")]
+        
+        
+        // Get: api/ImportFleetCardFED
+        [HttpGet("ImportFleetCardFED")]
         [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
         [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
-        public async Task<IActionResult> ImportFleetCardFED(
+        public async Task<IActionResult> ImportExcelFleetCardFED(
                                         [FromQuery] string? p_Parameter
                                         )
         {
@@ -508,11 +589,12 @@ namespace EXAT.ECM.FED.API.Controllers
             byte[] bytes = null;
             try
             {
-                var result = new SuccessResponse()
+                var result = new SuccessResponseImport()
                 {
                     Status = "S",
                     StatusCode = "200",
-                    Data = string.Format("Success"),
+                    Message = string.Format("Success"),
+                    Url     = "",
                 };
 
                 FEDParameterModel request = new FEDParameterModel();
@@ -533,7 +615,28 @@ namespace EXAT.ECM.FED.API.Controllers
                 }
                 #endregion
 
-                return Ok(new { message = "Imported successfully" });
+                var data = _fedService.ImportFileExcelFED(request);
+                var status = data.Result;
+
+                if (status.Status == "S")
+                {
+
+                    result.Status = "S"; 
+                    result.StatusCode = "200";
+                    result.Message = string.Format(status.Message);
+                    
+                }
+                if (status.Status != "S")
+                {
+
+                    result.Status = status.Status;
+                    result.StatusCode = "500";
+                    result.Message = string.Format(status.Message);
+                    //result.Url = string.Format(status.ErrorFileUrl);
+
+                }
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -545,6 +648,296 @@ namespace EXAT.ECM.FED.API.Controllers
                 };
                 _logger.LogError(ex, ex.Message);
                 return StatusCode(500, errorResponse);  // Return 500 if an error occurs
+            }
+        }
+
+        // Get: api/DownloadErrorExcel
+        [HttpGet("DownloadErrorExcel")]
+        [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
+        public async Task<IActionResult> DownloadErrorExcel(
+                                        [FromQuery] string? p_Parameter
+                                        )
+        {
+            _logger.LogInformation("Start processing DownloadErrorExcel");
+
+            System.IO.MemoryStream memoryStream = new System.IO.MemoryStream();
+            byte[] bytes = null;
+            try
+            {
+                
+                FEDParameterModel request = new FEDParameterModel();
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                var data = await _fedService.DownloadErrorExcel(request);
+                var dt = Utilities.ToDataTable(data.Detail);
+
+                using var package = new ExcelPackage();
+                var ws = package.Workbook.Worksheets.Add("Errors");
+                ws.Cells["A1"].LoadFromDataTable(dt, true);
+
+                var stream = new MemoryStream();
+                package.SaveAs(stream);
+                stream.Position = 0;
+
+                string fileName = $"ImportError_{request.p_TEMP_ID}.xlsx";
+                return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+
+
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = new ErrorResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = ex.Message
+                };
+                _logger.LogError(ex, ex.Message);
+                return StatusCode(500, errorResponse);  // Return 500 if an error occurs
+            }
+        }
+
+        [HttpGet("ImportBankFleetCard")]
+        [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
+        public async Task<IActionResult> ImportBankFleetCard([FromQuery] string? p_Parameter)
+        {
+            _logger.LogInformation("Start processing ImportFleetCardFED");
+
+            try
+            {
+                // 1) Validate p_Parameter (ว่าง/null/มีแต่ช่องว่าง)
+                if (string.IsNullOrWhiteSpace(p_Parameter))
+                {
+                    var invalid = new SuccessResponseImport
+                    {
+                        Status = "E",
+                        StatusCode = "200",  // คงคอนเวนชันเดิม: business error -> 200 OK
+                        Message = "Parameter 'p_Parameter' is required and cannot be empty.",
+                        Url = ""
+                    };
+                    _logger.LogWarning("ImportBankFleetCard: p_Parameter is missing or empty.");
+                    return Ok(invalid);
+                }
+
+                // 2) Parse p_Parameter: "key=value|key2=value2"
+                var map = p_Parameter
+                    .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(part => part.Split('=', 2))
+                    .Where(kv => kv.Length == 2)
+                    .ToDictionary(kv => kv[0].Trim(), kv => kv[1].Trim(), StringComparer.OrdinalIgnoreCase);
+
+                // 3) Compose request model
+                var request = new FEDParameterModel();
+                if (map.TryGetValue("p_TEMP_ID", out var tempId))
+                {
+                    request.p_TEMP_ID = string.IsNullOrWhiteSpace(tempId) ? null : Utilities.CleansingData(tempId);
+                }
+
+                if (string.IsNullOrEmpty(request.p_TEMP_ID))
+                {
+                    var missingTempId = new SuccessResponseImport
+                    {
+                        Status = "E",
+                        StatusCode = "200",
+                        Message = "Parameter 'p_TEMP_ID' is required.",
+                        Url = ""
+                    };
+                    _logger.LogWarning("ImportBankFleetCard: missing p_TEMP_ID.");
+                    return Ok(missingTempId);
+                }
+
+                _logger.LogInformation("ImportBankFleetCard: parsed params. Has p_TEMP_ID: {HasTempId}",
+                    !string.IsNullOrEmpty(request.p_TEMP_ID));
+
+                // 4) Call service
+                var serviceResult = await _fedService.ImportTransactionsAsync(request);
+
+                // 5) Map service result -> API result (200 เสมอ ยกเว้น throw)
+
+                var result = new SuccessResponseImport
+                {
+                    Status = serviceResult.Status,
+                    StatusCode = serviceResult.Status == "S" ? "200" : "500", // business error ก็ยังคง 200
+                    Message = serviceResult.Message,
+                    Url = "" // ใส่เพิ่มได้ถ้า service ส่งมา
+                };
+
+                // Log summary
+                if (serviceResult.Status == "S")
+                    _logger.LogInformation("ImportBankFleetCard: completed successfully.");
+                else
+                    _logger.LogWarning("ImportBankFleetCard: completed with business error: {Message}", serviceResult.Message);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = new ErrorResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = ex.Message
+                };
+                _logger.LogError(ex, "ImportBankFleetCard: unhandled exception.");
+                return StatusCode(500, errorResponse);
+            }
+        }
+                
+
+        [HttpGet("test-db-log")]
+        public async Task<IActionResult> TestDbLog()
+        {
+            try
+            {
+                await _loggingService.LogErrorAsync("ERROR", new Exception("TestException"), "Test log from /api/logtest/test-db-log endpoint.", "Manual test context");
+                return Ok(new { message = "Log written to DB (if no error)." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Failed to write log: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("test-get-import-configs")]
+        public async Task<IActionResult> TestGetImportConfigs()
+        {
+            List<Dictionary<string, object>> configs = new();
+            string logMessage;
+            string logError = null;
+            try
+            {
+                await using var conn = new OracleConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"SELECT CONFIG_ID, TEMPLATE_NAME, FIELD_NAME, SOURCE_COLUMN_NAME, SOURCE_COLUMN_INDEX, IS_REQUIRED
+                                    FROM EFM_FED.FLEET_CARD_IMPORT_CONFIGS";
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var row = new Dictionary<string, object>();
+                    for (int i = 0; i < reader.FieldCount; i++)
+                    {
+                        row[reader.GetName(i)] = await reader.IsDBNullAsync(i) ? null : reader.GetValue(i);
+                    }
+                    configs.Add(row);
+                }
+
+                logMessage = $"SUCCESS: Get {configs.Count} rows from FLEET_CARD_IMPORT_CONFIGS";
+            }
+            catch (Exception ex)
+            {
+                logMessage = $"ERROR: {ex.Message}";
+            }
+
+            // Insert log to FLEET_CARD_APP_LOGS
+            try
+            {
+                await using var logConn = new OracleConnection(_connectionString);
+                await logConn.OpenAsync();
+
+                
+                using var logCmd = logConn.CreateCommand();
+
+                logCmd.BindByName = true;
+                logCmd.CommandText = @"
+                    INSERT INTO EFM_FED.FLEET_CARD_APP_LOGS(LOG_TIMESTAMP, LOG_LEVEL, MESSAGE, STACK_TRACE, CONTEXT_INFO)
+                    VALUES (SYSTIMESTAMP, :p_level, :p_msg, :p_stack, :p_ctx)";
+                
+                logCmd.Parameters.Add(new OracleParameter("p_level", OracleDbType.Varchar2, "INFO", ParameterDirection.Input));
+
+                // ถ้า MESSAGE สั้นแน่ ๆ คงเป็น Varchar2 ได้
+                logCmd.Parameters.Add(new OracleParameter("p_msg", OracleDbType.Varchar2, logMessage ?? (object)DBNull.Value, ParameterDirection.Input));
+
+                // LOB: ห้ามผูกเป็น Varchar2
+                var stackParam = new OracleParameter("p_stack", OracleDbType.Clob, ParameterDirection.Input)
+                {
+                    Value = (object)stackTrace ?? DBNull.Value
+                };
+                logCmd.Parameters.Add(stackParam);
+
+                var ctxJson = System.Text.Json.JsonSerializer.Serialize(configs);
+                var ctxParam = new OracleParameter("p_ctx", OracleDbType.Clob, ParameterDirection.Input)
+                {
+                    Value = (object)ctxJson ?? DBNull.Value
+                };
+                logCmd.Parameters.Add(ctxParam);
+
+                await logCmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception logEx)
+            {
+                logError = $"ERROR insert log: {logEx.Message}";
+            }
+
+            return Ok(new { message = logMessage, logError, configs });
+        }
+
+        [HttpGet("test-insert-transaction")]
+        public async Task<IActionResult> TestInsertTransaction()
+        {
+            DateTime DateNow = DateTime.Now;
+            var transaction = new FleetCardTransaction
+            {
+                CardNumber = "1234567890123456",
+                PlateNumber = "TEST-PLATE",
+                TransactionDate = DateNow.ToString(),
+                StationName = "Test Station",
+                ProductName = "Test Product",
+                Quantity = 10,
+                UnitPrice = 20,
+                TotalAmount = 200,
+                Status = "TEST"
+            };
+            try
+            {
+                await _repository.InsertTransactionAsync(transaction);
+                return Ok(new { message = "Transaction inserted (if no error)." });
+            }
+            catch (System.Exception ex)
+            {
+                // Insert error log into FLEET_CARD_APP_LOGS
+                try
+                {
+                    await using var logConn = new OracleConnection(_connectionString);
+                    await logConn.OpenAsync();
+
+                    await using var logCmd = new Oracle.ManagedDataAccess.Client.OracleCommand(@"INSERT INTO EFM_FED.FLEET_CARD_APP_LOGS(LOG_TIMESTAMP, LOG_LEVEL, MESSAGE, STACK_TRACE, CONTEXT_INFO)
+                        VALUES (SYSTIMESTAMP, :logLevel, :message, :stackTrace, :contextInfo)", logConn)
+                    {
+                        CommandType = System.Data.CommandType.Text
+                    };
+                    logCmd.Parameters.Add(":logLevel", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2, 20).Value = "ERROR";
+                    logCmd.Parameters.Add(":message", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2, 4000).Value = ex.Message;
+                    logCmd.Parameters.Add(":stackTrace", Oracle.ManagedDataAccess.Client.OracleDbType.Clob).Value = ex.ToString();
+                    logCmd.Parameters.Add(":contextInfo", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2, 1000).Value = $"TestInsertTransaction | CardNumber: {transaction.CardNumber}";
+                    
+                    await logCmd.ExecuteNonQueryAsync();
+                }
+                catch (System.Exception logEx)
+                {
+                    System.Console.WriteLine($"[FATAL] Failed to write error log: {logEx.Message}");
+                }
+                return StatusCode(500, new { message = $"Failed to insert transaction: {ex.Message}" });
             }
         }
     }

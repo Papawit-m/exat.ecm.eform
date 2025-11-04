@@ -8,6 +8,20 @@ using System.Data;
 using System.Reflection.PortableExecutable;
 using static EXAT.ECM.FED.API.Models.APIModel.ResponseModel;
 using System.Text.Json;
+using EXAT.ECM.FED.API.Models.IMPORT;
+using OfficeOpenXml;
+using Microsoft.AspNetCore.Mvc;
+using System.Xml.Linq;
+using SkiaSharp;
+using System.Reflection;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using EXAT.ECM.FED.API.Helper;
+using static EXAT.ECM.FED.API.Models.Utilities;
+using System.Globalization;
+using System.Threading;
+
+
+
 namespace EXAT.ECM.FED.API.Services
 {
     public class FEDService : IFEDService  
@@ -15,13 +29,24 @@ namespace EXAT.ECM.FED.API.Services
         private readonly OracleDbContext _oracleContext;
         private readonly IConfiguration _configuration;
         private readonly ILogger<FEDService> _logger;
+        private readonly string _connectionString;
+        private readonly IConfigService _configService;
+        private readonly ILoggingService _loggingService; 
+        private readonly IFleetCardRepository _repository;
 
-        public FEDService(OracleDbContext oracleContext, IConfiguration configuration, ILogger<FEDService> logger)
+
+        public FEDService(OracleDbContext oracleContext, IConfiguration configuration, ILogger<FEDService> logger, IConfigService configService,IFleetCardRepository repository, ILoggingService loggingService)
         {
             _oracleContext = oracleContext;
             _configuration = configuration;
             _logger = logger;
+            _configService = configService;
+            _loggingService = loggingService;
+            _repository = repository;
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
         }
+
         //FED VEHICLE REPORT
         public async Task<FED_VEHICLE_REPORT> GetVEHICLEAsync(FEDParameterModel request)
         {
@@ -454,7 +479,6 @@ namespace EXAT.ECM.FED.API.Services
             return result;
         }
 
-
         //FUELEXPENSE REQ REPORT
         public async Task<FUELEXPENSEREQ> GetFuelexpenseRequestFormAsync(FEDParameterModel request)
         {
@@ -860,6 +884,645 @@ namespace EXAT.ECM.FED.API.Services
                 )
                 .ToListAsync();
             return result;
+        }
+
+        //Import Feed card
+        public async Task<ImportResult> ImportFileExcelFED(FEDParameterModel request)
+        {
+            var p1 = request.p_TEMP_ID ?? (object)DBNull.Value;
+
+            string conectdb = "";
+            string CheckFileExcel = "";
+            try
+            {
+                using (var connection = new OracleConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    string dbName = "";
+                    using (var command = new OracleCommand("SELECT sys_context('USERENV', 'DB_NAME') FROM dual", connection))
+                    {
+                        dbName = command.ExecuteScalar()?.ToString();
+                    }
+
+                    conectdb = "Step 1. Check Connect : ✅ Connection Successful! - database = " + dbName;
+                }
+            }
+            catch (Exception ex)
+            {
+                conectdb = "Step 1. Check Connect : ❌ Connection Failed - error = " + ex.Message;
+            }
+
+            var result = new ImportResult();
+            try
+            {
+                
+                // Step 1: Get file from SP_GET_FILE_EXCEL
+                var FileExcelList = await GetFileFromDatabase(request);
+                var FileExcel = FileExcelList?.FirstOrDefault();
+                
+                if (FileExcel == null || string.IsNullOrEmpty(FileExcel.FILE_CONTENT))
+                {
+                    CheckFileExcel = "Step 2. Check FileExcel : ไม่พบไฟล์ที่เกี่ยวข้อง";
+
+                    result.Status = "E";
+                    result.Message = conectdb + ";" + CheckFileExcel;
+                    //await InsertLog(p_Parameter, "E", result.Message);
+                    return result;
+                }
+
+                if(FileExcel != null && !string.IsNullOrEmpty(FileExcel.FILE_CONTENT))
+                {
+                    // Step 2: Decode + read to DataTable
+
+                    var tbl = ReadExcelBase64(FileExcel.FILE_CONTENT);
+                    if (tbl.Rows.Count == 0 || string.IsNullOrEmpty(FileExcel.FILE_CONTENT))
+                    {
+                        CheckFileExcel = "Step 3. Check Data File Excel : ไม่พบข้อมูลในไฟล์ Excel";
+
+                        result.Status = "E";
+                        result.Message = conectdb + ";" + CheckFileExcel;
+                        //await InsertLog(p_Parameter, "E", result.Message);
+                        return result;
+                    }
+                    if (tbl.Rows.Count != 0)
+                    {
+                        // Step 3: Call SP_VALIDATE_EXCEL_TEMP_ID
+                        var tempList = ConvertDataTableToTemp(tbl, request.p_TEMP_ID);
+                        using (var conn = _oracleContext.GetOracleConnection())
+
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = @"INSERT INTO EFM_FED.T_TEMP_FED_IMPORT_FLEETCARD (
+                                                ITEM_ID
+	                                            , IMPORT_DATE
+	                                            , ACCOUNT_NO
+	                                            , CREDIT_LINE
+	                                            , FROM_DATE
+	                                            , TODATE
+	                                            , DEPARTMENT
+	                                            , COST_CENTER
+	                                            , CARD_NO
+	                                            , PLATE_NO
+	                                            , TRANSACTION_DATE
+	                                            , MERCHANT_ID
+	                                            , TAX_ID
+	                                            , MERCHANT_NAME
+	                                            , LOCATION
+	                                            , ADDRESS_ACCORDING
+	                                            , BRANCH_NUMBER
+	                                            , INVOICE_NO
+	                                            , PRODUCT
+	                                            , QUANTITY_LITRE
+	                                            , QUANTITY_KM
+	                                            , EXCLUDE_VAT_AMOUNT
+	                                            , VAT_AMOUNT
+	                                            , AMOUNT
+	                                            , UNIT_PRICE
+	                                            , ODOMETER
+	                                            , DISTANCE_KM
+	                                            , FUEL_CONS_KM_LITRE
+	                                            , FUEL_CONS_BAHT_KM
+	                                            , NGV_CONS_KM_KG
+	                                            , NGV_CONS_BAHT_KM
+	                                            , LPG_CONS_KM_LITRE
+	                                            , LPG_CONS_BAHT_KM
+	                                            , FUEL_CONS_KM_LITRE2
+	                                            , TEMP_GROUP_ID
+                                        ) VALUES (
+                                                  :ITEM_ID
+	                                            , :IMPORT_DATE
+	                                            , :ACCOUNT_NO
+	                                            , :CREDIT_LINE
+	                                            , :FROM_DATE
+	                                            , :TODATE
+	                                            , :DEPARTMENT
+	                                            , :COST_CENTER
+	                                            , :CARD_NO
+	                                            , :PLATE_NO
+	                                            , :TRANSACTION_DATE
+	                                            , :MERCHANT_ID
+	                                            , :TAX_ID
+	                                            , :MERCHANT_NAME
+	                                            , :LOCATION
+	                                            , :ADDRESS_ACCORDING
+	                                            , :BRANCH_NUMBER
+	                                            , :INVOICE_NO
+	                                            , :PRODUCT
+	                                            , :QUANTITY_LITRE
+	                                            , :QUANTITY_KM
+	                                            , :EXCLUDE_VAT_AMOUNT
+	                                            , :VAT_AMOUNT
+	                                            , :AMOUNT
+	                                            , :UNIT_PRICE
+	                                            , :ODOMETER
+	                                            , :DISTANCE_KM
+	                                            , :FUEL_CONS_KM_LITRE
+	                                            , :FUEL_CONS_BAHT_KM
+	                                            , :NGV_CONS_KM_KG
+	                                            , :NGV_CONS_BAHT_KM
+	                                            , :LPG_CONS_KM_LITRE
+	                                            , :LPG_CONS_BAHT_KM
+	                                            , :FUEL_CONS_KM_LITRE2
+	                                            , :TEMP_GROUP_ID
+                                                           )";
+                            cmd.ArrayBindCount = tempList.Count;
+
+                            cmd.Parameters.Add(":TEMP_ID", OracleDbType.Varchar2, tempList.Select(x => x.ITEM_ID).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":IMPORT_DATE", OracleDbType.Date, tempList.Select(x => x.INSERT_DATE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":ACCOUNT_NO", OracleDbType.Varchar2, tempList.Select(x => x.ACCOUNT_NO).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":CREDIT_LINE", OracleDbType.Varchar2, tempList.Select(x => x.CREDIT_LINE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":FROM_DATE", OracleDbType.Varchar2, tempList.Select(x => x.FROM_DATE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":TODATE", OracleDbType.Varchar2, tempList.Select(x => x.TODATE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":DEPARTMENT", OracleDbType.Varchar2, tempList.Select(x => x.DEPARTMENT).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":COST_CENTER", OracleDbType.Varchar2, tempList.Select(x => x.COST_CENTER).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":CARD_NO", OracleDbType.Varchar2, tempList.Select(x => x.CARD_NO).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":PLATE_NO", OracleDbType.Varchar2, tempList.Select(x => x.PLATE_NO).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":TRANSACTION_DATE", OracleDbType.Varchar2, tempList.Select(x => x.TRANSACTION_DATE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":MERCHANT_ID", OracleDbType.Varchar2, tempList.Select(x => x.MERCHANT_ID).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":TAX_ID", OracleDbType.Varchar2, tempList.Select(x => x.TAX_ID).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":MERCHANT_NAME", OracleDbType.Varchar2, tempList.Select(x => x.MERCHANT_NAME).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":LOCATION", OracleDbType.Varchar2, tempList.Select(x => x.LOCATION).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":ADDRESS_ACCORDING", OracleDbType.Varchar2, tempList.Select(x => x.ADDRESS_ACCORDING).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":BRANCH_NUMBER", OracleDbType.Varchar2, tempList.Select(x => x.BRANCH_NUMBER).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":INVOICE_NO", OracleDbType.Varchar2, tempList.Select(x => x.INVOICE_NO).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":PRODUCT", OracleDbType.Varchar2, tempList.Select(x => x.PRODUCT).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":QUANTITY_LITRE", OracleDbType.Varchar2, tempList.Select(x => x.QUANTITY_LITRE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":QUANTITY_KM", OracleDbType.Varchar2, tempList.Select(x => x.QUANTITY_KM).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":EXCLUDE_VAT_AMOUNT", OracleDbType.Varchar2, tempList.Select(x => x.EXCLUDE_VAT_AMOUNT).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":VAT_AMOUNT", OracleDbType.Varchar2, tempList.Select(x => x.VAT_AMOUNT).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":AMOUNT", OracleDbType.Varchar2, tempList.Select(x => x.AMOUNT).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":UNIT_PRICE", OracleDbType.Varchar2, tempList.Select(x => x.UNIT_PRICE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":ODOMETER", OracleDbType.Varchar2, tempList.Select(x => x.ODOMETER).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":DISTANCE_KM", OracleDbType.Varchar2, tempList.Select(x => x.DISTANCE_KM).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":FUEL_CONS_KM_LITRE", OracleDbType.Varchar2, tempList.Select(x => x.FUEL_CONS_KM_LITRE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":FUEL_CONS_BAHT_KM", OracleDbType.Varchar2, tempList.Select(x => x.FUEL_CONS_BAHT_KM).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":NGV_CONS_KM_KG", OracleDbType.Varchar2, tempList.Select(x => x.NGV_CONS_KM_KG).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":NGV_CONS_BAHT_KM", OracleDbType.Varchar2, tempList.Select(x => x.NGV_CONS_BAHT_KM).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":LPG_CONS_KM_LITRE", OracleDbType.Varchar2, tempList.Select(x => x.LPG_CONS_KM_LITRE).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":LPG_CONS_BAHT_KM", OracleDbType.Varchar2, tempList.Select(x => x.LPG_CONS_BAHT_KM).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":FUEL_CONS_KM_LITRE2", OracleDbType.Varchar2, tempList.Select(x => x.FUEL_CONS_KM_LITRE2).ToArray(), ParameterDirection.Input);
+                            cmd.Parameters.Add(":TEMP_GROUP_ID", OracleDbType.Varchar2, tempList.Select(x => x.TEMP_GROUP_ID).ToArray(), ParameterDirection.Input);
+
+                            await cmd.ExecuteNonQueryAsync();
+
+                            // Step 4: Insert to Temp Table
+                            var isValid = await ValidateExcel(request);
+                            var statusvalidate = isValid?.FirstOrDefault();
+
+                            if (statusvalidate.Status == "E")
+                            {
+                                //string url = await GenerateErrorFile(p_Parameter);
+                                result.Status = "EU";
+                                result.Message = "ข้อมูลบางรายการไม่ถูกต้อง";
+                                //result.ErrorFileUrl = url;
+                                //await InsertLog(p_Parameter, "S", result.Message);
+                                return result;
+                            }
+                            if (statusvalidate.Status == "S")
+                            {
+                                //string url = await GenerateErrorFile(p_Parameter);
+                                result.Status = "S";
+                                result.Message = "Success";
+                                //result.ErrorFileUrl = url;
+                                //await InsertLog(p_Parameter, "S", result.Message);
+                                return result;
+                            }
+
+                        }
+                        
+                    }
+                }
+                //await InsertLog(p_Parameter, "S", result.Message);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Status = "E";
+                result.Message = ex.Message;
+                //await InsertLog(p_Parameter, "E", ex.Message);
+                //return StatusCode(500, result);
+                return result;
+            }
+        }
+        private async Task<List<T_TEMP_FED_FILE>> GetFileFromDatabase(FEDParameterModel request)
+        {
+
+            var p1 = request.p_TEMP_ID ?? (object)DBNull.Value;
+            
+            var result = await _oracleContext
+                    .Set<T_TEMP_FED_FILE>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7404_SP_GET_FILE_EXCEL (
+                                            :P_TEMP_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_TEMP_ID", request.p_TEMP_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+            return result;
+
+        }
+        private DataTable ReadExcelBase64(string base64)
+        {
+            var tbl = new DataTable();
+
+            byte[] bytes;
+
+            string wrappedXml = $"<root>{base64}</root>";
+            var doc = XDocument.Parse(wrappedXml);
+            var node = doc.Descendants("content").FirstOrDefault()?.Value;
+
+            try
+            {
+                bytes = Convert.FromBase64String(node);
+            }
+            catch (FormatException ex)
+            {
+                throw new Exception("ข้อมูลไฟล์ไม่ถูกต้องหรือไม่ได้อยู่ในรูปแบบ base64", ex);
+            }
+           
+
+            using var stream = new MemoryStream(bytes);
+            using var excel = new ExcelPackage(stream);
+            var ws = excel.Workbook.Worksheets.First();
+
+            foreach (var firstRowCell in ws.Cells[1, 1, 1, ws.Dimension.End.Column])
+                tbl.Columns.Add(firstRowCell.Text);
+
+            int startRow = 2;
+            for (int rowNum = startRow; rowNum <= ws.Dimension.End.Row; rowNum++)
+            {
+                var wsRow = ws.Cells[rowNum, 1, rowNum, ws.Dimension.End.Column];
+                DataRow row = tbl.NewRow();
+                foreach (var cell in wsRow)
+                    row[cell.Start.Column - 1] = cell.Text;
+                tbl.Rows.Add(row);
+            }
+
+            return tbl;
+        }
+        private List<T_TEMP_FED_IMPORT_FLEETCARD> ConvertDataTableToTemp(DataTable tbl, string? tempId)
+        {
+            var listData = new List<T_TEMP_FED_IMPORT_FLEETCARD>();
+            var date = DateTime.Now;
+            for (int i = 0; i < tbl.Rows.Count; i++)
+            {
+
+                var item = new T_TEMP_FED_IMPORT_FLEETCARD
+                {
+                    ITEM_ID = Guid.NewGuid(),
+                    TEMP_GROUP_ID = tempId,
+                    INSERT_DATE = date
+                };
+                for (int j = 0; j < tbl.Columns.Count; j++)
+                {
+                    string columnName = tbl.Columns[j].ColumnName;
+                    string value = tbl.Rows[i][j]?.ToString();
+                    SetColumnValue(item, columnName, value);
+                }
+                listData.Add(item);
+            }
+            return listData;
+        }
+        private void SetColumnValue(T_TEMP_FED_IMPORT_FLEETCARD item, string columnName, string value)
+        {
+            string cleanValue = !string.IsNullOrEmpty(value) ? value.Trim() : null;
+            switch (columnName)
+            {
+                case "IMPORT_DATE": item.IMPORT_DATE = cleanValue; break;
+                case "ACCOUNT_NO": item.ACCOUNT_NO = cleanValue; break;
+                case "CREDIT_LINE": item.CREDIT_LINE = cleanValue; break;
+                case "FROM_DATE": item.FROM_DATE = cleanValue; break;
+                case "TODATE": item.TODATE = cleanValue; break;
+                case "DEPARTMENT": item.DEPARTMENT = cleanValue; break;
+                case "COST_CENTER": item.COST_CENTER = cleanValue; break;
+                case "CARD_NO": item.CARD_NO = cleanValue; break;
+                case "PLATE_NO": item.PLATE_NO = cleanValue; break;
+                case "TRANSACTION_DATE": item.TRANSACTION_DATE = cleanValue; break;
+                case "MERCHANT_ID": item.MERCHANT_ID = cleanValue; break;
+                case "TAX_ID": item.TAX_ID = cleanValue; break;
+                case "MERCHANT_NAME": item.MERCHANT_NAME = cleanValue; break;
+                case "LOCATION": item.LOCATION = cleanValue; break;
+                case "ADDRESS_ACCORDING": item.ADDRESS_ACCORDING = cleanValue; break;
+                case "BRANCH_NUMBER": item.BRANCH_NUMBER = cleanValue; break;
+                case "INVOICE_NO": item.INVOICE_NO = cleanValue; break;
+                case "PRODUCT": item.PRODUCT = cleanValue; break;
+                case "QUANTITY_LITRE": item.QUANTITY_LITRE = cleanValue; break;
+                case "QUANTITY_KM": item.QUANTITY_KM = cleanValue; break;
+                case "EXCLUDE_VAT_AMOUNT": item.EXCLUDE_VAT_AMOUNT = cleanValue; break;
+                case "VAT_AMOUNT": item.VAT_AMOUNT = cleanValue; break;
+                case "AMOUNT": item.AMOUNT = cleanValue; break;
+                case "UNIT_PRICE": item.UNIT_PRICE = cleanValue; break;
+                case "ODOMETER": item.ODOMETER = cleanValue; break;
+                case "DISTANCE_KM": item.DISTANCE_KM = cleanValue; break;
+                case "FUEL_CONSUMPTION_KM_LITRE": item.FUEL_CONS_KM_LITRE = cleanValue; break;
+                case "FUEL_CONSUMPTION_BAHT_KM": item.FUEL_CONS_BAHT_KM = cleanValue; break;
+                case "NGV_CONSUMPTION_KM_KG": item.NGV_CONS_KM_KG = cleanValue; break;
+                case "NGV_CONSUMPTION_BAHT_KM": item.NGV_CONS_BAHT_KM = cleanValue; break;
+                case "LPG_CONSUMPTION_KM_LITRE": item.LPG_CONS_KM_LITRE = cleanValue; break;
+                case "LPG_CONSUMPTION_BAHT_KM": item.LPG_CONS_BAHT_KM = cleanValue; break;
+                case "FUEL_CONSUMPTION_KM__LITRE": item.FUEL_CONS_KM_LITRE2 = cleanValue; break;
+            }
+        }
+        private async Task<List<T_VALIDATE_EXCEL>> ValidateExcel(FEDParameterModel request)
+        {
+            var p1 = request.p_TEMP_ID ?? (object)DBNull.Value;
+
+            var result = await _oracleContext
+                    .Set<T_VALIDATE_EXCEL>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7404_VALIDATE_EXCEL (
+                                            :P_TEMP_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_TEMP_ID", request.p_TEMP_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+            return result;
+        }
+
+        public async Task<T_TEMP_FED_IMPORT_FLEETCARD_ERROR> DownloadErrorExcel(FEDParameterModel request)
+        {
+            T_TEMP_FED_IMPORT_FLEETCARD_ERROR result = new T_TEMP_FED_IMPORT_FLEETCARD_ERROR();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetFuelFleetCardFormAsync ");
+
+                SuccessResponse<T_TEMP_FED_IMPORT_FLEETCARD_ERROR> response = new SuccessResponse<T_TEMP_FED_IMPORT_FLEETCARD_ERROR>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                // Log ก่อนเรียกข้อมูลจาก Oracle
+                _logger.LogInformation("Calling Oracle ");
+
+                // เรียกข้อมูลจาก Oracle
+                
+                var detail = await GetFileExcelError(request);
+                result.Detail = detail;
+
+                // Log หลังจากได้รับข้อมูลจาก Oracle
+                _logger.LogInformation("Received {DetailData} records from Oracle.", detail.Count);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // Handle the error and log it
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                //return new ErrorResponse
+                //{
+                //    Status = "E",
+                //    StatusCode = "500",=
+                //    Message = "An error occurred while processing your request."
+                //};
+                return null;
+            }
+        }
+
+        private async Task<List<T_TEMP_FED_IMPORT_FLEETCARD_ERROR_LIST>> GetFileExcelError(FEDParameterModel request)
+        {
+
+            var p1 = request.p_TEMP_ID ?? (object)DBNull.Value;
+
+            var result = await _oracleContext
+                    .Set<T_TEMP_FED_IMPORT_FLEETCARD_ERROR_LIST>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7404_GET_FILE_EXCEL_ERROR (
+                                            :P_TEMP_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_TEMP_ID", request.p_TEMP_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+            return result;
+        }
+
+        public async Task<ImportResultBankFED<Dictionary<string, string?>>> ImportTransactionsAsync(FEDParameterModel request)
+        {
+
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+            Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
+
+            var result = new ImportResultBankFED<Dictionary<string, string?>>
+            {
+                HeaderId = null
+            };
+
+            // 0) Check DB connection (optional health check)
+            string connectDbNote;
+            try
+            {
+                using var connection = new OracleConnection(_connectionString);
+                await connection.OpenAsync();
+                using var command = new OracleCommand("SELECT sys_context('USERENV', 'DB_NAME') FROM dual", connection);
+                var dbName = (await command.ExecuteScalarAsync())?.ToString();
+                connectDbNote = $"Step 1. Check Connect : ✅ Connection Successful! - database = {dbName}";
+            }
+            catch (Exception ex)
+            {
+                connectDbNote = $"Step 1. Check Connect : ❌ Connection Failed - error = {ex.Message}";
+            }
+
+            // 1) ดึงไฟล์จาก DB
+            var fileExcelList = await GetFileFromDatabase(request);
+            var fileExcel = fileExcelList?.FirstOrDefault();
+
+            if (fileExcel == null || string.IsNullOrWhiteSpace(fileExcel.CONTENT_VALUE))
+            {
+                var msg = "Step 2. Check FileExcel : ไม่พบไฟล์ที่เกี่ยวข้อง";
+                result.Status = "E";
+                result.Message = $"{connectDbNote};{msg}";
+                result.FailureDetails.Add(new ImportFailureDetail
+                {
+                    RowNumber = 0,
+                    RawData = "",
+                    ErrorMessage = $"{connectDbNote};เกิดข้อผิดพลาดในการอ่านไฟล์: {msg}"
+                });
+                return result;
+            }
+
+            // ตั้งค่าพื้นฐานจากไฟล์
+            result.HeaderId = fileExcel.HEADER_ID;
+            var fileName = fileExcel.FILE_NAME ?? "UNKNOWN";
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+
+            // 2) Template name -> config
+            string determinedTemplateName = DetermineTemplateNameFromFileName(fileName);
+            var config = await _configService.GetTemplateConfigAsync(determinedTemplateName);
+            if (!config.Any())
+                throw new Exception($"Configuration for template '{determinedTemplateName}' not found in database.");
+
+            // 3) Allow only .xlsx (EPPlus limitation)
+            if (ext == ".xls")
+            {
+                // ถ้าต้องรองรับ .xls จริง ๆ แนะนำเปลี่ยนไปใช้ NPOI/Aspose.Cells แทน EPPlus
+                result.Status = "E";
+                result.Message = "ไฟล์ .xls ไม่รองรับโดย EPPlus กรุณาแปลงเป็น .xlsx ก่อนนำเข้า (หรือเปลี่ยนไปใช้ NPOI/Aspose.Cells สำหรับ .xls)";
+                result.FailureDetails.Add(new ImportFailureDetail
+                {
+                    RowNumber = 0,
+                    RawData = "",
+                    ErrorMessage = result.Message
+                });
+                return result;
+            }
+
+            try
+            {
+                // 4) แปลง CLOB -> bytes (พยายามถอด Base64 แบบยืดหยุ่น)
+                //if (!ClobBinaryDecoder.TryDecodeBase64Flexible(fileExcel.CONTENT_VALUE, out var fileBytes, out var decodeWhy))
+                //{
+                //    throw new Exception($"ถอดข้อมูลไฟล์จาก CLOB ไม่สำเร็จ: {decodeWhy}");
+                //}
+                var fileBytes = Convert.FromBase64String(fileExcel.CONTENT_VALUE);
+
+                using var stream = new MemoryStream(fileBytes);
+                using var package = new ExcelPackage(stream);
+
+                var ws = package.Workbook.Worksheets.FirstOrDefault()
+                         ?? throw new Exception("No worksheet found in Excel file.");
+                if (ws.Dimension == null)
+                    throw new Exception("Worksheet has no used range.");
+
+                // 5) อ่าน header ส่วนบน
+                var headerInfo = ImportParsingHelpers.ReadReportHeader(ws, config, headerRow: 7, processBlockRow: 6);
+
+                // 6) วนอ่านแถวข้อมูลจริง
+                var state = ContinuationState.Empty;
+                int rowStart = 19; // ทำ dynamic ได้ภายหลัง
+                int rowCount = ws.Dimension.End.Row;
+                int totalRowsInFile = 0;
+                DateTime DateNow = DateTime.Now;
+
+                for (int row = rowStart; row <= rowCount; row++)
+                {
+                    // 6.1 Department row
+                    if (ImportParsingHelpers.TryReadDepartmentRow(ws, row, out var dept, out var costCenter))
+                    {
+                        state = state.With(department: dept, costCenter: costCenter);
+                        continue;
+                    }
+
+                    // 6.2 Card row
+                    if (ImportParsingHelpers.TryReadCardRow(ws, row, out var cardNo, out var plateNo))
+                    {
+                        if (!string.IsNullOrEmpty(cardNo) || !string.IsNullOrEmpty(plateNo))
+                            state = state.With(cardNumber: cardNo, plateNumber: plateNo);
+                        continue;
+                    }
+
+                    // 6.3 Transaction row
+                    ImportParsingHelpers.IsTransactionRow(ws, row, out var rawDateText);
+                    var check = rawDateText;
+                    if (check != null && check != "")
+                    {
+                        totalRowsInFile++;
+
+                        var (ok, txDate, err) = ImportParsingHelpers.TryParseTransactionDate(rawDateText);
+                        if (!ok)
+                        {
+                            var failureDetail = new ImportFailureDetail
+                            {
+                                RowNumber = row,
+                                RawData = string.Join(" | ", Enumerable.Range(1, ws.Dimension.End.Column).Select(col => ws.Cells[row, col].Text)),
+                                ErrorMessage = $"TransactionDate '{rawDateText}' is invalid or missing. Use DateTime.Now instead. ({err})"
+                            };
+                            result.FailureDetails.Add(failureDetail);
+
+                            await _loggingService.LogErrorAsync(
+                                "WARN",
+                                new Exception("Invalid TransactionDate"),
+                                failureDetail.ErrorMessage,
+                                $"File: {fileName}, Row: {row}, Col: 1");
+
+                            txDate = DateNow.ToString();
+                        }
+
+                        var rowData = ImportParsingHelpers.BuildRowDataFromConfig(ws, row, config, state);
+                        var entity = ImportParsingHelpers.MapToEntity(rowData, headerInfo, result.HeaderId!, txDate);
+
+                        try
+                        {
+                            await _repository.InsertTransactionAsync(entity);
+                            result.SuccessDetails.Add(rowData);
+                        }
+                        catch (Exception ex)
+                        {
+                            var failureDetail = new ImportFailureDetail
+                            {
+                                RowNumber = row,
+                                RawData = string.Join(" | ", Enumerable.Range(1, ws.Dimension.End.Column).Select(col => ws.Cells[row, col].Text)),
+                                ErrorMessage = ex.Message
+                            };
+                            result.FailureDetails.Add(failureDetail);
+
+                            await _loggingService.LogErrorAsync("ERROR", ex, "Failed to insert transaction.",
+                                $"File: {fileName}, Row: {row}");
+                        }
+                    }
+                }
+
+                // 7) สรุปผล
+                result.TotalRowsInFile = totalRowsInFile;
+                result.SuccessfulRows = result.SuccessDetails.Count;
+                result.FailedRows = result.FailureDetails.Count;
+
+                if (totalRowsInFile == 0)
+                {
+                    var ex = new Exception("No data rows found in import file.");
+                    await _loggingService.LogErrorAsync("ERROR", ex, "No data rows", $"File: {fileName}");
+                    result.FailureDetails.Add(new ImportFailureDetail
+                    {
+                        RowNumber = 0,
+                        RawData = "",
+                        ErrorMessage = "ไม่พบข้อมูลในไฟล์ที่นำเข้า"
+                    });
+                }
+
+                result.Status = result.FailedRows == 0 ? "S" : "E";
+                result.Message = (result.Status == "S")
+                    ? "นำเข้าข้อมูลสำเร็จ"
+                    : $"นำเข้าบางรายการไม่สำเร็จ (สำเร็จ {result.SuccessfulRows} / ล้มเหลว {result.FailedRows})";
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "Error reading import file", $"File: {fileName}");
+                result.Status = "E";
+                result.Message = ex.Message;
+                result.FailureDetails.Add(new ImportFailureDetail
+                {
+                    RowNumber = 0,
+                    RawData = "",
+                    ErrorMessage = "เกิดข้อผิดพลาดในการอ่านไฟล์: " + ex.Message
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// เมธอด Helper สำหรับวิเคราะห์ชื่อไฟล์เพื่อหา Template
+        /// </summary>
+        private string DetermineTemplateNameFromFileName(string fileName)
+        {
+            var upperFileName = fileName.ToUpperInvariant();
+            if (upperFileName.StartsWith("VAT_") || upperFileName.StartsWith("NOVAT_"))
+            {
+                return "ORPT_MONTHLY_REPORT";
+            }
+            throw new ArgumentException("Invalid filename format. Only files starting with VAT_ or NOVAT_ are supported.");
         }
     }
 }
