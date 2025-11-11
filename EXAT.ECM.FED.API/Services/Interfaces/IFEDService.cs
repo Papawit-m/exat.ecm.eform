@@ -16,8 +16,11 @@ namespace EXAT.ECM.FED.API.Services.Interfaces
         Task<PoliceFuelExceed> GetPolicefuelExceedRequestFormAsync(FEDParameterModel request);
         //INCOMPTFUELTAXINV REPORT
         Task<FED_INCOMPT_FUEL_TAXINV> GetIncomptFuelTaxinvFormAsync(FEDParameterModel request);
+
         //FUELFLEETCARD REPORT
-        Task<FuelFleetCard> GetFuelFleetCardFormAsync(FEDParameterModel request);
+        Task<FuelFleetCard> GetFuelFleetCardFormAsync(ParameterHEADER_REPORT request);
+        Task<List<Header_Report>> GetLIST_HEADER_REPORTFormAsync(FEDParameterModel request);
+        
         //Import Feed card
         Task<ImportResult> ImportFileExcelFED(FEDParameterModel request);
         //DownloadErrorExcel

@@ -3,6 +3,7 @@ using Aspose.Words.Tables;
 using Aspose.Words;
 using System.Data;
 using System.Reflection;
+using System.Drawing;
 
 namespace EXAT.ECM.FED.API.Helper
 {
@@ -53,7 +54,7 @@ namespace EXAT.ECM.FED.API.Helper
             {
                 foreach (var replaceObj in replaceObjs)
                 {
-                    foreach (string keyname in replaceObj.Keys)
+                    foreach (string keyname in  replaceObj.Keys)
                     {
                         // Key
                         node.Range.Replace("[" + keyname + "]"
@@ -65,6 +66,7 @@ namespace EXAT.ECM.FED.API.Helper
                 }
             }
         }
+        
         public void ReplaceNodeDataRow(Node node, string bookMarkName, List<Dictionary<string, ReplaceObject>> replaceObjs)
         {
             Bookmark bm = node.Range.Bookmarks[bookMarkName];
@@ -98,11 +100,50 @@ namespace EXAT.ECM.FED.API.Helper
                             Row newItemRow = (Row)coppyItemRow.Clone(true);
                             itemTable.Rows.Insert((itemRowIndex + 1), newItemRow);
                             ReplaceNodeText(newItemRow, replaceObjs[i]);
-                            //if (i == 0)
-                            //    itemRow.Remove();
-                        }
+                            foreach (var T_replaceObj in replaceObjs[i])
+                            {
+                                if(T_replaceObj.Key == "HIGHLIGHT_COLOR" )
+                                {
+                                    string colorValue = "";
+
+                                    var val = T_replaceObj.Value?.Value;
+                                    var fmt = T_replaceObj.Value?.Format;
+
+                                    if (val != null)
+                                    {
+                                        colorValue = !string.IsNullOrEmpty(fmt)
+                                            ? string.Format("{0:" + fmt + "}", val)
+                                            : Convert.ToString(val);
+                                    }
+
+                                    // เรียกใช้กับ newItemRow โดยตรง (ไม่ใช่ node หรือ table ทั้ง document)
+                                    ReplaceBackgroundColor(newItemRow, colorValue);
+                                }
+                            }
+                                //if (i == 0)
+                                //    itemRow.Remove();
+                            }
                     }
                 }
+            }
+        }
+        public void ReplaceBackgroundColor(Row row, string colorValue)
+        {
+            if (string.IsNullOrWhiteSpace(colorValue))
+                return;
+
+            try
+            {
+                Color color = ColorTranslator.FromHtml(colorValue);
+
+                foreach (Cell cell in row.Cells)
+                {
+                    cell.CellFormat.Shading.BackgroundPatternColor = color;
+                }
+            }
+            catch
+            {
+                throw;
             }
         }
         public void RemoveRowWithSpecificBookmark(Document doc, string bookmarkName)
@@ -190,7 +231,6 @@ namespace EXAT.ECM.FED.API.Helper
             }
             return result;
         }
-
         private DataTable ToDataTable<T>(T item)
         {
             DateTime _date_start = DateTime.Now;

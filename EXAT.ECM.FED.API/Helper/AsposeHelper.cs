@@ -88,7 +88,34 @@ namespace EXAT.ECM.FED.API.Helper
             sorce.AppendDocument(document, ImportFormatMode.KeepSourceFormatting);
             sorce.Save(stream, saveFormat);
         }
+        public byte[] MergePdfFiles(List<byte[]> pdfFiles)
+        {
+            try
+            {
+                using (var outputPdf = new Aspose.Pdf.Document())
+                {
+                    foreach (var pdf in pdfFiles)
+                    {
+                        using (var ms = new MemoryStream(pdf))
+                        {
+                            var inputPdf = new Aspose.Pdf.Document(ms);
+                            outputPdf.Pages.Add(inputPdf.Pages);
+                        }
+                    }
 
+                    using (var outStream = new MemoryStream())
+                    {
+                        outputPdf.Save(outStream);
+                        Console.WriteLine($"Merged file size: {outStream.Length} bytes");
+                        return outStream.ToArray();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
         private void SetLicense()
         {
             /// TODO:: Load Fonts custom
@@ -96,7 +123,14 @@ namespace EXAT.ECM.FED.API.Helper
 
             Aspose.Words.License lic = new Aspose.Words.License();
             using (System.IO.FileStream fs = System.IO.File.OpenRead(licensePath))
-            { lic.SetLicense(fs); }
+            { 
+                lic.SetLicense(fs);
+            }
+            //var pdfLic = new Aspose.Pdf.License();
+            //using (var fs = File.OpenRead(licensePath))
+            //{
+            //    pdfLic.SetLicense(fs);
+            //}
         }
 
         #region ReplaceWithHtml

@@ -1,5 +1,8 @@
-﻿namespace EXAT.ECM.FED.API.Models
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace EXAT.ECM.FED.API.Models
 {
+    [Keyless]
     public class FED_INCOMPT_FUEL_TAXINV
     {
         public string? MONTH { get; set; }
