@@ -39,11 +39,12 @@ namespace EXAT.ECM.EER.ESARABAN.Middleware
             string? username = null;
             int statusCode = 200;
             string? errorMessage = null;
+            string? responseContent = null;
 
             try
             {
-                // Extract username from request body (if available)
-                username = ExtractUsernameFromRequest(requestBody);
+                // Extract username from request body or query string
+                username = ExtractUsernameFromRequest(context.Request, requestBody);
 
                 // Process the request
                 await _next(context);
@@ -51,9 +52,33 @@ namespace EXAT.ECM.EER.ESARABAN.Middleware
                 stopwatch.Stop();
                 statusCode = context.Response.StatusCode;
 
-                // Log success (only for API endpoints)
+                // Read response body
+                responseBody.Seek(0, SeekOrigin.Begin);
+                using (var reader = new StreamReader(responseBody, Encoding.UTF8, leaveOpen: true))
+                {
+                    responseContent = await reader.ReadToEndAsync();
+                }
+                responseBody.Seek(0, SeekOrigin.Begin);
+
+                // Log all responses (only for API endpoints)
                 if (context.Request.Path.StartsWithSegments("/api"))
                 {
+                    // Determine success flag and log level based on status code
+                    var successFlag = (statusCode >= 200 && statusCode < 400) ? "Y" : "N";
+                    var logLevel = statusCode switch
+                    {
+                        >= 500 => "ERROR",
+                        >= 400 => "WARNING",
+                        _ => "INFO"
+                    };
+
+                    // Build full request path with query string
+                    var fullPath = context.Request.Path.Value ?? "";
+                    if (context.Request.QueryString.HasValue)
+                    {
+                        fullPath += context.Request.QueryString.Value;
+                    }
+
                     await apiLogService.LogSuccessAsync(
                         endpoint: context.Request.Path.Value ?? "",
                         httpMethod: context.Request.Method,
@@ -61,7 +86,10 @@ namespace EXAT.ECM.EER.ESARABAN.Middleware
                         statusCode: statusCode,
                         executionTime: stopwatch.ElapsedMilliseconds,
                         requestBody: TruncateString(requestBody, 4000),
-                        responseData: null
+                        responseData: TruncateString(responseContent, 4000),
+                        successFlag: successFlag,
+                        logLevel: logLevel,
+                        requestPath: fullPath
                     );
                 }
             }
@@ -73,6 +101,13 @@ namespace EXAT.ECM.EER.ESARABAN.Middleware
 
                 _logger.LogError(ex, $"API Error: {context.Request.Path}");
 
+                // Build full request path with query string
+                var fullPath = context.Request.Path.Value ?? "";
+                if (context.Request.QueryString.HasValue)
+                {
+                    fullPath += context.Request.QueryString.Value;
+                }
+
                 // Log error (only for API endpoints)
                 if (context.Request.Path.StartsWithSegments("/api"))
                 {
@@ -81,7 +116,8 @@ namespace EXAT.ECM.EER.ESARABAN.Middleware
                         httpMethod: context.Request.Method,
                         username: username ?? "Anonymous",
                         ex: ex,
-                        requestBody: TruncateString(requestBody, 4000)
+                        requestBody: TruncateString(requestBody, 4000),
+                        requestPath: fullPath
                     );
                 }
 
@@ -128,10 +164,17 @@ namespace EXAT.ECM.EER.ESARABAN.Middleware
         }
 
         /// <summary>
-        /// Extract username จาก Request Body
+        /// Extract username จาก Query String หรือ Request Body
         /// </summary>
-        private string? ExtractUsernameFromRequest(string? requestBody)
+        private string? ExtractUsernameFromRequest(HttpRequest request, string? requestBody)
         {
+            // Try query string first (for endpoints like Transfer, Generate Code)
+            if (request.Query.ContainsKey("user_ad"))
+            {
+                return request.Query["user_ad"].ToString();
+            }
+
+            // Fallback to JSON body
             try
             {
                 if (string.IsNullOrEmpty(requestBody))

@@ -150,7 +150,7 @@ namespace EXAT.ECM.EService.API.Services.Implementations
                             Email = exatResponse.Data.Email,
                             FirstName = exatResponse.Data.FirstName,
                             LastName = exatResponse.Data.LastName,
-                            PhoneNumber = exatResponse.Data.UserType, // Placeholder, adjust as needed
+                            PhoneNumber = exatResponse.Data.PhoneNo, // Placeholder, adjust as needed
                             Status = exatResponse.Data.Active,
                             contact_address_house_no = exatResponse.Data.ContactAddress.HouseNo,
                             contact_address_village_no = exatResponse.Data.ContactAddress.VillageNo,

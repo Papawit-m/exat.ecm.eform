@@ -168,27 +168,75 @@ namespace EXAT.ECM.EER.ESARABAN.Services
         /// <summary>
         /// Call eSaraban API: POST /api/books/transfer
         /// </summary>
-        public async Task<TransferBookResponse?> TransferBookAsync(TransferBookRequest request)
+        public async Task<TransferBookResponse?> TransferBookAsync(
+            string userAd,
+            string bookId,
+            string? tranferId,
+            string originalOrgCode,
+            string destinationOrgCode,
+            TransferBookRequest? request)
         {
             try
             {
-                _logger.LogInformation($"Calling eSaraban API: POST {_settings.Endpoints.BooksTransfer}");
+                var fullUrl = $"{_httpClient.BaseAddress}{_settings.Endpoints.BooksTransfer}";
+                _logger.LogInformation($"[DEBUG] Calling eSaraban API - Transfer Book");
+                _logger.LogInformation($"[DEBUG] BaseAddress: {_httpClient.BaseAddress}");
+                _logger.LogInformation($"[DEBUG] Endpoint: {_settings.Endpoints.BooksTransfer}");
+                _logger.LogInformation($"[DEBUG] Full URL: {fullUrl}");
+                _logger.LogInformation($"[DEBUG] user_ad: {userAd}, book_id: {bookId}");
+                _logger.LogInformation($"[DEBUG] from: {originalOrgCode} → to: {destinationOrgCode}");
 
-                var jsonContent = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                // eSaraban API expects snake_case field names (NOT camelCase)
+                // Use custom SnakeCaseNamingPolicy to convert property names
+                var jsonOptions = new JsonSerializerOptions
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = false
-                });
+                    PropertyNamingPolicy = Utils.SnakeCaseNamingPolicy.Instance,
+                    WriteIndented = false,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
+                };
+
+                var jsonContent = JsonSerializer.Serialize(request, jsonOptions);
+
+                _logger.LogInformation($"[DEBUG] Request body length: {jsonContent.Length} bytes");
+
+                // Log full JSON for debugging (to temp file to avoid log truncation)
+                try
+                {
+                    var tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"k2rest-transfer-request-{DateTime.Now:yyyyMMddHHmmss}.json");
+                    System.IO.File.WriteAllText(tempFile, jsonContent, System.Text.Encoding.UTF8);
+                    _logger.LogInformation($"[DEBUG] Full request JSON saved to: {tempFile}");
+                }
+                catch { }
+
+                // Log first 800 characters for quick review
+                var jsonPreview = jsonContent.Length > 800 ? jsonContent.Substring(0, 800) + "..." : jsonContent;
+                _logger.LogInformation($"[DEBUG] Request JSON (preview): {jsonPreview}");
 
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(_settings.Endpoints.BooksTransfer, content);
+
+                // Build query string with all required parameters
+                // Note: eSaraban Transfer API does NOT require request body, only query parameters
+                // tranferId can be "null" string (eSaraban API accepts "null" as valid value)
+                var tranferIdValue = string.IsNullOrEmpty(tranferId) ? "null" : tranferId;
+
+                var queryParams = $"user_ad={Uri.EscapeDataString(userAd)}" +
+                                 $"&book_id={Uri.EscapeDataString(bookId)}" +
+                                 $"&tranfer_id={Uri.EscapeDataString(tranferIdValue)}" +
+                                 $"&original_org_code={Uri.EscapeDataString(originalOrgCode)}" +
+                                 $"&destination_org_code={Uri.EscapeDataString(destinationOrgCode)}";
+
+                var endpoint = $"{_settings.Endpoints.BooksTransfer}?{queryParams}";
+                _logger.LogInformation($"[DEBUG] Calling endpoint: {endpoint}");
+
+                var response = await _httpClient.PostAsync(endpoint, content);
 
                 var responseBody = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation($"eSaraban API Response: {response.StatusCode}");
+                _logger.LogInformation($"[DEBUG] eSaraban API Response: {response.StatusCode}");
+                _logger.LogInformation($"[DEBUG] Response body: {responseBody.Substring(0, Math.Min(200, responseBody.Length))}");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError($"eSaraban API Error: {responseBody}");
+                    _logger.LogError($"eSaraban API Error ({response.StatusCode}): {responseBody}");
                     return null;
                 }
 
@@ -201,7 +249,13 @@ namespace EXAT.ECM.EER.ESARABAN.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error calling eSaraban TransferBook API: {ex.Message}");
+                _logger.LogError(ex, $"[DEBUG] Exception calling eSaraban TransferBook API");
+                _logger.LogError($"[DEBUG] Exception Type: {ex.GetType().Name}");
+                _logger.LogError($"[DEBUG] Exception Message: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError($"[DEBUG] Inner Exception: {ex.InnerException.Message}");
+                }
                 return null;
             }
         }

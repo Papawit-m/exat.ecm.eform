@@ -75,6 +75,9 @@ namespace EXAT.ECM.EService.API.Model.Responses
         [JsonPropertyName("last_name")]
         public string? LastName { get; set; }
 
+        [JsonPropertyName("phone_no")]
+        public string? PhoneNo { get; set; }
+
         [JsonPropertyName("created_at")]
         public string? CreatedAt { get; set; }
 

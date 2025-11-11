@@ -31,6 +31,31 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
         /// <summary>
         /// สร้างเอกสารแบบง่าย - กรณีอนุมัติ/เข้าสู่หลักเกณ์ (K2 SmartObject Compatible)
         /// </summary>
+        /// <remarks>
+        /// ตัวอย่าง Response (Flat, K2-compatible):
+        ///
+        /// ```json
+        /// {
+        ///   "Status": "S",
+        ///   "StatusCode": "200",
+        ///   "Message": "Success: generate book.",
+        ///   "BookId": "0CEB9F7B3BF144E097CD6871FE177D1F",
+        ///   "BookSubject": "ทดสอบ",
+        ///   "BookTo": "สผว.",
+        ///   "RegistrationBookId": "012...000",
+        ///   "ParentBookId": null,
+        ///   "ParentOrgId": null,
+        ///   "ParentPositionName": null,
+        ///   "BookTypeId": 0,
+        ///   "BookFile": null,
+        ///   "FileCount": 0,
+        ///   "BookAttach": null,
+        ///   "AttachCount": 0,
+        ///   "CreatedBy": "EXAT\\\\ECMUSR07",
+        ///   "CreatedDate": "2025-11-07T10:30:00Z"
+        /// }
+        /// ```
+        /// </remarks>
         /// <param name="simpleRequest">ข้อมูลการสร้างเอกสารแบบง่าย (รับผ่าน Request Body)</param>
         /// <returns>ข้อมูลเอกสารที่สร้างขึ้น</returns>
         [HttpPost("create/approved/simple")]
@@ -39,9 +64,10 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
             Description = "สร้างเอกสารใหม่แบบง่าย ๆ โดยส่งเฉพาะพารามิเตอร์ที่จำเป็นผ่าน Request Body (รองรับ K2 REST Service integration และ K2 SmartObject)",
             Tags = new[] { "Books - Create (K2 Compatible)" }
         )]
-        [SwaggerResponse(200, "Success - เอกสารถูกสร้างสำเร็จ", typeof(ApiResponse<object>))]
-        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง", typeof(ApiResponse<object>))]
-        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ", typeof(ApiResponse<object>))]
+        // K2 Compatible: Flat response model (no ApiResponse wrapper)
+        [SwaggerResponse(200, "Success - เอกสารถูกสร้างสำเร็จ", typeof(CreateBookSimpleResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง", typeof(CreateBookSimpleResponse))]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ", typeof(CreateBookSimpleResponse))]
         public async Task<IActionResult> CreateBookApprovedSimple(
             [FromBody, SwaggerRequestBody("ข้อมูลการสร้างเอกสารแบบง่าย (K2 SmartObject Compatible)", Required = true)] CreateBookApprovedSimpleRequest simpleRequest)
         {
@@ -182,6 +208,23 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
         /// <summary>
         /// กรณี อนุมัติ/เข้าสู่หลักเกณ์ - สร้างเอกสารสำหรับกรณีที่ได้รับการอนุมัติและเข้าสู่หลักเกณ์แล้ว
         /// </summary>
+        /// <remarks>
+        /// ตัวอย่าง Response (Flat, K2-compatible):
+        ///
+        /// ```json
+        /// {
+        ///   "Status": "S",
+        ///   "StatusCode": "200",
+        ///   "Message": "Success: generate book.",
+        ///   "BookId": "0CEB9F7B3BF144E097CD6871FE177D1F",
+        ///   "BookSubject": "ทดสอบ",
+        ///   "BookTo": "สผว.",
+        ///   "RegistrationBookId": "012...000",
+        ///   "CreatedBy": "EXAT\\\\ECMUSR07",
+        ///   "CreatedDate": "2025-11-07T10:30:00Z"
+        /// }
+        /// ```
+        /// </remarks>
         /// <param name="request">ข้อมูลการสร้างเอกสาร (รวม user_ad, book, bookAttach, bookFile, bookHistory, bookReferences, bookReferenceAttach)</param>
         /// <returns>ข้อมูลเอกสารที่สร้างขึ้น</returns>
         [HttpPost("create/approved")]
@@ -190,10 +233,11 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
             Description = "สร้างเอกสารใหม่สำหรับกรณีที่ได้รับการอนุมัติและเข้าสู่หลักเกณ์แล้ว (มีหนังสือรับรองจากหน่วยงานที่เกี่ยวข้อง)",
             Tags = new[] { "Books - Create" }
         )]
-        [SwaggerResponse(200, "Success - เอกสารถูกสร้างสำเร็จ", typeof(ApiResponse<object>))]
-        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง", typeof(ApiResponse<object>))]
-        [SwaggerResponse(404, "Not Found - ไม่พบข้อมูล", typeof(ApiResponse<object>))]
-        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ", typeof(ApiResponse<object>))]
+        // K2 Compatible: Flat response model
+        [SwaggerResponse(200, "Success - เอกสารถูกสร้างสำเร็จ", typeof(CreateBookSimpleResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง", typeof(CreateBookSimpleResponse))]
+        [SwaggerResponse(404, "Not Found - ไม่พบข้อมูล", typeof(CreateBookSimpleResponse))]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ", typeof(CreateBookSimpleResponse))]
         public async Task<IActionResult> CreateBookApproved(
             [FromBody, SwaggerRequestBody("ข้อมูลการสร้างเอกสารกรณีอนุมัติ (ตาม eSaraban API Spec)", Required = true)] ESarabanCreateBookRequest request)
         {
@@ -955,10 +999,10 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
         public async Task<IActionResult> TransferBook(
             [FromQuery, SwaggerParameter("Active Directory username (e.g., EXAT\\ECMUSR07)", Required = true)] string user_ad,
             [FromQuery, SwaggerParameter("Book ID ที่ต้องการโอนย้าย", Required = true)] string book_id,
-            [FromQuery, SwaggerParameter("Transfer ID (optional)")] string? tranfer_id,
             [FromQuery, SwaggerParameter("รหัสองค์กรต้นทาง", Required = true)] string original_org_code,
             [FromQuery, SwaggerParameter("รหัสองค์กรปลายทาง", Required = true)] string destination_org_code,
-            [FromBody, SwaggerRequestBody("ข้อมูลการโอนย้าย", Required = true)] TransferBookRequest request)
+            [FromQuery, SwaggerParameter("Transfer ID (optional, send 'null' string if not needed)", Required = false)] string? tranfer_id = "null",
+            [FromBody, SwaggerRequestBody("ข้อมูลการโอนย้าย (optional - can be empty)", Required = false)] TransferBookRequest? request = null)
         {
             try
             {
@@ -997,22 +1041,27 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                     ));
                 }
 
-                if (request == null)
+                // If tranfer_id is null or empty, use "null" string (eSaraban API accepts "null" as valid value)
+                if (string.IsNullOrEmpty(tranfer_id))
                 {
-                    return BadRequest(ApiResponse<object>.ErrorResponse(
-                        "Request body is required",
-                        "REQUEST_BODY_REQUIRED"
-                    ));
+                    tranfer_id = "null";
                 }
 
-                // Build full request for eSaraban API
-                // Note: Query parameters (user_ad, book_id, etc.) need to be sent as part of the API request
-                // For now, we'll include them in the request body
-                // TODO: Check actual eSaraban API specification for Transfer endpoint
+                // Request body is optional - create empty request if not provided
+                if (request == null)
+                {
+                    request = new TransferBookRequest();
+                }
 
                 // Call real eSaraban External API
-                _logger.LogInformation($"Calling eSaraban API to transfer book: {book_id} from {original_org_code} to {destination_org_code}");
-                var apiResponse = await _esarabanApi.TransferBookAsync(request);
+                _logger.LogInformation($"Calling eSaraban API to transfer book: {book_id} from {original_org_code} to {destination_org_code}, tranfer_id: {tranfer_id}");
+                var apiResponse = await _esarabanApi.TransferBookAsync(
+                    user_ad,
+                    book_id,
+                    tranfer_id ?? "null",
+                    original_org_code,
+                    destination_org_code,
+                    request);
 
                 if (apiResponse == null)
                 {
@@ -1024,13 +1073,14 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                 }
 
                 // Update response with query parameters (since API might not return all fields)
-                apiResponse.BookId = apiResponse.BookId ?? book_id;
-                apiResponse.TransferId = apiResponse.TransferId ?? tranfer_id;
-                apiResponse.OriginalOrgCode = apiResponse.OriginalOrgCode ?? original_org_code;
-                apiResponse.DestinationOrgCode = apiResponse.DestinationOrgCode ?? destination_org_code;
-                apiResponse.TransferredBy = apiResponse.TransferredBy ?? user_ad;
-                apiResponse.TransferReason = apiResponse.TransferReason ?? request.TransferReason;
-                apiResponse.TransferNote = apiResponse.TransferNote ?? request.TransferNote;
+                // Treat empty strings as null for fallback logic (K2 compatibility)
+                apiResponse.BookId = string.IsNullOrEmpty(apiResponse.BookId) ? book_id : apiResponse.BookId;
+                apiResponse.TransferId = string.IsNullOrEmpty(apiResponse.TransferId) ? (tranfer_id ?? "null") : apiResponse.TransferId;
+                apiResponse.OriginalOrgCode = string.IsNullOrEmpty(apiResponse.OriginalOrgCode) ? original_org_code : apiResponse.OriginalOrgCode;
+                apiResponse.DestinationOrgCode = string.IsNullOrEmpty(apiResponse.DestinationOrgCode) ? destination_org_code : apiResponse.DestinationOrgCode;
+                apiResponse.TransferredBy = string.IsNullOrEmpty(apiResponse.TransferredBy) ? user_ad : apiResponse.TransferredBy;
+                apiResponse.TransferReason = string.IsNullOrEmpty(apiResponse.TransferReason) ? (request?.TransferReason ?? "") : apiResponse.TransferReason;
+                apiResponse.TransferNote = string.IsNullOrEmpty(apiResponse.TransferNote) ? request?.TransferNote : apiResponse.TransferNote;
 
                 _logger.LogInformation($"Book transferred successfully (from eSaraban API): Status={apiResponse.Status}, Message={apiResponse.Message}");
 
@@ -1049,6 +1099,202 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                     $"Internal server error: {ex.Message}",
                     "TRANSFER_ERROR"
                 ));
+            }
+        }
+
+        /// <summary>
+        /// โอนย้าย Book ระหว่างองค์กร (K2 Compatible - Flat JSON)
+        /// </summary>
+        /// <param name="user_ad">Active Directory username (e.g., EXAT\ECMUSR07)</param>
+        /// <param name="book_id">Book ID ที่ต้องการโอนย้าย</param>
+        /// <param name="tranfer_id">Transfer ID (optional)</param>
+        /// <param name="original_org_code">รหัสองค์กรต้นทาง</param>
+        /// <param name="destination_org_code">รหัสองค์กรปลายทาง</param>
+        /// <param name="request">ข้อมูลการโอนย้าย</param>
+        /// <returns>ผลการโอนย้าย Book (Flat JSON)</returns>
+        [HttpPost("transfer/simple")]
+        [SwaggerOperation(
+            Summary = "โอนย้าย Book (K2 Compatible - Flat JSON)",
+            Description = "โอนย้าย Book จากองค์กรหนึ่งไปยังอีกองค์กรหนึ่ง พร้อมบันทึกเหตุผลและรายละเอียด\n\n**🌐 Real eSaraban API Integration**\n\n**✅ K2 Compatible**: Flat JSON Response (NO wrapper)\n\n**Valid Organization Codes** (J-prefix required):\n- `J10100` - กองจัดหาที่ดิน (Land Acquisition Division)\n- `J10000` - กองที่ดิน (Land Division) \n- `J10200` - กองบริหารที่ดิน (Land Management Division)\n\n**Invalid Codes** (will cause ORA-01403 error):\n- `0000000001`, `0000000002` (numeric format)\n\n**ตัวอย่างการใช้งาน**:\n```json\n// Request Body (Optional - can be empty {})\n{\n  \"transferReason\": \"โอนย้ายเอกสารไปยังหน่วยงานที่เกี่ยวข้อง\",\n  \"transferNote\": \"ทดสอบ K2 API\",\n  \"createBy\": \"EXAT\\\\ECMUSR07\"\n}\n\n// Response (Flat JSON)\n{\n  \"status\": \"S\",\n  \"statusCode\": \"200\",\n  \"message\": \"Success: sent book transfer.\",\n  \"book_id\": \"ABC123\",\n  \"transfer_id\": \"TRF-2025-001\",\n  \"original_org_code\": \"J10100\",\n  \"destination_org_code\": \"J10200\",\n  \"transferred_by\": \"EXAT\\\\ECMUSR07\",\n  \"transferred_date\": \"2025-11-07T18:45:00\"\n}\n```",
+            Tags = new[] { "Books - Operations" }
+        )]
+        [SwaggerResponse(200, "Success - โอนย้ายสำเร็จ (Flat JSON - K2 Compatible)", typeof(TransferBookSimpleResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง")]
+        [SwaggerResponse(404, "Not Found - ไม่พบ Book หรือองค์กร")]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ")]
+        public async Task<IActionResult> TransferBookSimple(
+            [FromQuery, SwaggerParameter("Active Directory username (e.g., EXAT\\ECMUSR07)", Required = true)] string user_ad,
+            [FromQuery, SwaggerParameter("Book ID ที่ต้องการโอนย้าย", Required = true)] string book_id,
+            [FromQuery, SwaggerParameter("รหัสองค์กรต้นทาง (J-prefix, e.g., J10100)", Required = true)] string original_org_code,
+            [FromQuery, SwaggerParameter("รหัสองค์กรปลายทาง (J-prefix, e.g., J10200)", Required = true)] string destination_org_code,
+            [FromQuery, SwaggerParameter("Transfer ID (optional, send 'null' string if not needed)", Required = false)] string? tranfer_id = "null",
+            [FromBody, SwaggerRequestBody("ข้อมูลการโอนย้าย (optional - can be empty)", Required = false)] TransferBookRequest? request = null)
+        {
+            try
+            {
+                _logger.LogInformation($"TransferBookSimple called by user: {user_ad}, book_id: {book_id}, from: {original_org_code} to: {destination_org_code}");
+
+                // Validate input
+                if (string.IsNullOrEmpty(user_ad))
+                {
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "user_ad is required"
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                if (string.IsNullOrEmpty(book_id))
+                {
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "book_id is required"
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                if (string.IsNullOrEmpty(original_org_code))
+                {
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "original_org_code is required"
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                if (string.IsNullOrEmpty(destination_org_code))
+                {
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "destination_org_code is required"
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                // Validate organization code format (J-prefix)
+                if (!original_org_code.StartsWith("J") || original_org_code.Length != 6)
+                {
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = $"Invalid original_org_code format: '{original_org_code}'. Must be J-prefix with 5 digits (e.g., J10100)"
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                if (!destination_org_code.StartsWith("J") || destination_org_code.Length != 6)
+                {
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = $"Invalid destination_org_code format: '{destination_org_code}'. Must be J-prefix with 5 digits (e.g., J10200)"
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                // If tranfer_id is null or empty, use "null" string (eSaraban API accepts "null" as valid value)
+                if (string.IsNullOrEmpty(tranfer_id))
+                {
+                    tranfer_id = "null";
+                }
+
+                // Request body is optional - create empty request if not provided
+                if (request == null)
+                {
+                    request = new TransferBookRequest
+                    {
+                        TransferReason = "โอนย้ายเอกสารไปยังหน่วยงานที่เกี่ยวข้อง",
+                        TransferNote = "โอนย้ายผ่าน K2 REST API",
+                        CreateBy = user_ad
+                    };
+                }
+                else
+                {
+                    // Apply fallback values if request properties are null or empty
+                    if (string.IsNullOrEmpty(request.TransferReason))
+                    {
+                        request.TransferReason = "โอนย้ายเอกสารไปยังหน่วยงานที่เกี่ยวข้อง";
+                    }
+                    if (string.IsNullOrEmpty(request.TransferNote))
+                    {
+                        request.TransferNote = "โอนย้ายผ่าน K2 REST API";
+                    }
+                    if (string.IsNullOrEmpty(request.CreateBy))
+                    {
+                        request.CreateBy = user_ad;
+                    }
+                }
+
+                _logger.LogInformation($"Transfer request prepared: book_id={book_id}, tranfer_id={tranfer_id}, from={original_org_code} to={destination_org_code}");
+
+                // Call eSaraban External API to transfer book
+                _logger.LogInformation("Calling eSaraban API to transfer book...");
+                var apiResponse = await _esarabanApi.TransferBookAsync(
+                    user_ad,
+                    book_id,
+                    tranfer_id,
+                    original_org_code,
+                    destination_org_code,
+                    request
+                );
+
+                if (apiResponse == null)
+                {
+                    _logger.LogError("Failed to call eSaraban TransferBook API");
+
+                    var errorResponse = new TransferBookSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "503",
+                        Message = "Failed to connect to eSaraban API. Please try again later."
+                    };
+                    return StatusCode(503, errorResponse);
+                }
+
+                _logger.LogInformation($"Book transferred successfully (from eSaraban API): Status={apiResponse.Status}, Message={apiResponse.Message}");
+
+                // K2 Compatible: Convert to flat response
+                var simpleResponse = new TransferBookSimpleResponse
+                {
+                    Status = apiResponse.Status ?? "E",
+                    StatusCode = apiResponse.StatusCode ?? "500",
+                    Message = apiResponse.Message ?? "Unknown error",
+                    BookId = apiResponse.BookId ?? book_id,
+                    TransferId = apiResponse.TransferId ?? tranfer_id,
+                    OriginalOrgCode = apiResponse.OriginalOrgCode ?? original_org_code,
+                    DestinationOrgCode = apiResponse.DestinationOrgCode ?? destination_org_code,
+                    TransferReason = apiResponse.TransferReason ?? request.TransferReason,
+                    TransferNote = apiResponse.TransferNote ?? request.TransferNote,
+                    TransferStatus = apiResponse.TransferStatus ?? "",
+                    TransferredBy = apiResponse.TransferredBy ?? user_ad,
+                    TransferredDate = apiResponse.TransferredDate
+                };
+
+                // Return flat JSON (K2 Compatible)
+                return Ok(simpleResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in TransferBookSimple: {ex.Message}");
+
+                // K2 Compatible: Return flat error response
+                var errorResponse = new TransferBookSimpleResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = $"Internal server error: {ex.Message}"
+                };
+                return StatusCode(500, errorResponse);
             }
         }
 
@@ -1214,6 +1460,236 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
             }
         }
 
+        /// <summary>
+        /// [K2 Compatible] ดึงข้อมูลองค์กรปลายทาง (First Record Only - Flat JSON)
+        /// 🎯 K2 SmartObject Ready - No Arrays, Flat Structure
+        /// </summary>
+        /// <param name="user_ad">Active Directory username (e.g., EXAT\ECMUSR07)</param>
+        /// <param name="book_id">Book ID</param>
+        /// <returns>ข้อมูลองค์กรแรก (Flat JSON)</returns>
+        [HttpGet("final-orgs/by-action/simple")]
+        [SwaggerOperation(
+            Summary = "[K2 Compatible] ดึงข้อมูลองค์กรปลายทาง (Flat JSON - First Record)",
+            Description = "ดึงข้อมูลองค์กรปลายทางแบบ Flat JSON (ส่งแค่ Organization แรก)\n\n**🎯 K2 SmartObject Compatible**\n\n- ✅ Flat JSON (NO arrays)\n- ✅ First record only\n- ✅ K2 can read all fields directly\n- ✅ With Alert notification\n\nResponse structure:\n```json\n{\n  \"status\": \"S\",\n  \"statusCode\": \"200\",\n  \"message\": \"\",\n  \"book_id\": \"ABC123\",\n  \"total_organizations\": 2,\n  \"running_no\": 1,\n  \"send_org_nameth\": \"กองจัดหาที่ดิน\",\n  \"send_date\": \"07-NOV-25\",\n  \"receive_code\": null,\n  \"receive_date\": null,\n  \"receive_org_nameth\": \"J10000 กองที่ดิน\",\n  \"status_nameth\": \"รอดำเนินการรับหนังสือ\",\n  \"receive_comment\": null,\n  \"query_type\": \"with_alert\",\n  \"queried_by\": \"EXAT\\\\ECMUSR07\",\n  \"queried_date\": \"2025-11-07T19:30:00Z\"\n}\n```\n\n⚠️ Note: ถ้ามี Organization หลายตัว จะส่งแค่ตัวแรก (First Record)",
+            Tags = new[] { "Books - Query - K2 Compatible" }
+        )]
+        [SwaggerResponse(200, "Success - K2 Compatible Flat JSON", typeof(GetFinalOrgsSimpleResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง")]
+        [SwaggerResponse(404, "Not Found - ไม่พบข้อมูล")]
+        [SwaggerResponse(503, "Service Unavailable - eSaraban API ไม่สามารถเชื่อมต่อได้")]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ")]
+        public async Task<IActionResult> GetFinalOrgsByActionSimple(
+            [FromQuery, SwaggerParameter("Active Directory username (e.g., EXAT\\ECMUSR07)", Required = true)] string user_ad,
+            [FromQuery, SwaggerParameter("Book ID", Required = true)] string book_id)
+        {
+            try
+            {
+                _logger.LogInformation($"GetFinalOrgsByActionSimple (K2) called by user: {user_ad} for book_id: {book_id}");
+
+                // Validate input
+                if (string.IsNullOrEmpty(user_ad))
+                {
+                    return BadRequest(new GetFinalOrgsSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "user_ad is required",
+                        BookId = book_id ?? string.Empty
+                    });
+                }
+
+                if (string.IsNullOrEmpty(book_id))
+                {
+                    return BadRequest(new GetFinalOrgsSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "book_id is required",
+                        QueriedBy = user_ad
+                    });
+                }
+
+                // Call real eSaraban External API (with alert)
+                _logger.LogInformation("Calling eSaraban API to get final organizations (K2 Simple - with alert)...");
+                var apiResponse = await _esarabanApi.GetFinalOrgsByActionAsync(user_ad, book_id);
+
+                if (apiResponse == null)
+                {
+                    _logger.LogError("Failed to call eSaraban GetFinalOrgsByAction API");
+                    return StatusCode(503, new GetFinalOrgsSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "503",
+                        Message = "Failed to connect to eSaraban API. Please try again later.",
+                        BookId = book_id,
+                        QueriedBy = user_ad,
+                        QueriedDate = DateTime.Now
+                    });
+                }
+
+                // Convert to K2 Flat response (First record only)
+                var simpleResponse = new GetFinalOrgsSimpleResponse
+                {
+                    Status = apiResponse.Status,
+                    StatusCode = apiResponse.StatusCode,
+                    Message = apiResponse.Books?.Count > 0 ? $"Found {apiResponse.Books.Count} organization(s), returning first record only" : "No organizations found",
+                    BookId = book_id,
+                    TotalOrganizations = apiResponse.Books?.Count ?? 0,
+                    QueryType = "with_alert",
+                    QueriedBy = user_ad,
+                    QueriedDate = DateTime.Now
+                };
+
+                // Fill first organization data (if exists)
+                if (apiResponse.Books != null && apiResponse.Books.Count > 0)
+                {
+                    var firstOrg = apiResponse.Books[0];
+                    simpleResponse.RunningNo = firstOrg.RunningNo;
+                    simpleResponse.SendOrgNameTh = firstOrg.SendOrgNameTh ?? string.Empty;
+                    simpleResponse.SendDate = firstOrg.SendDate ?? string.Empty;
+                    simpleResponse.ReceiveCode = firstOrg.ReceiveCode;
+                    simpleResponse.ReceiveDate = firstOrg.ReceiveDate;
+                    simpleResponse.ReceiveOrgNameTh = firstOrg.ReceiveOrgNameTh ?? string.Empty;
+                    simpleResponse.StatusNameTh = firstOrg.StatusNameTh ?? string.Empty;
+                    simpleResponse.ReceiveComment = firstOrg.ReceiveComment;
+                }
+
+                _logger.LogInformation($"K2 Simple response created: {simpleResponse.TotalOrganizations} organization(s) found");
+
+                // Return K2 Compatible Flat JSON
+                return Ok(simpleResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetFinalOrgsByActionSimple: {ex.Message}");
+
+                return StatusCode(500, new GetFinalOrgsSimpleResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = $"Error retrieving final organizations: {ex.Message}",
+                    BookId = book_id ?? string.Empty,
+                    QueriedBy = user_ad ?? "Unknown",
+                    QueriedDate = DateTime.Now
+                });
+            }
+        }
+
+        /// <summary>
+        /// [K2 Compatible] ดึงข้อมูลองค์กรปลายทาง (First Record Only - Flat JSON, No Alert)
+        /// 🎯 K2 SmartObject Ready - No Arrays, Flat Structure
+        /// </summary>
+        /// <param name="user_ad">Active Directory username (e.g., EXAT\ECMUSR07)</param>
+        /// <param name="book_id">Book ID</param>
+        /// <returns>ข้อมูลองค์กรแรก (Flat JSON, No Alert)</returns>
+        [HttpGet("final-orgs/by-action/no-alert/simple")]
+        [SwaggerOperation(
+            Summary = "[K2 Compatible] ดึงข้อมูลองค์กรปลายทาง (Flat JSON - First Record, No Alert)",
+            Description = "ดึงข้อมูลองค์กรปลายทางแบบ Flat JSON (ส่งแค่ Organization แรก, ไม่มี Alert)\n\n**🎯 K2 SmartObject Compatible**\n\n- ✅ Flat JSON (NO arrays)\n- ✅ First record only\n- ✅ K2 can read all fields directly\n- ❌ No Alert notification\n\nResponse structure: (Same as simple with alert)\n\n⚠️ Note: ถ้ามี Organization หลายตัว จะส่งแค่ตัวแรก (First Record)",
+            Tags = new[] { "Books - Query - K2 Compatible" }
+        )]
+        [SwaggerResponse(200, "Success - K2 Compatible Flat JSON", typeof(GetFinalOrgsSimpleResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ถูกต้อง")]
+        [SwaggerResponse(404, "Not Found - ไม่พบข้อมูล")]
+        [SwaggerResponse(503, "Service Unavailable - eSaraban API ไม่สามารถเชื่อมต่อได้")]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาดภายในระบบ")]
+        public async Task<IActionResult> GetFinalOrgsByActionNoAlertSimple(
+            [FromQuery, SwaggerParameter("Active Directory username (e.g., EXAT\\ECMUSR07)", Required = true)] string user_ad,
+            [FromQuery, SwaggerParameter("Book ID", Required = true)] string book_id)
+        {
+            try
+            {
+                _logger.LogInformation($"GetFinalOrgsByActionNoAlertSimple (K2) called by user: {user_ad} for book_id: {book_id}");
+
+                // Validate input
+                if (string.IsNullOrEmpty(user_ad))
+                {
+                    return BadRequest(new GetFinalOrgsSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "user_ad is required",
+                        BookId = book_id ?? string.Empty
+                    });
+                }
+
+                if (string.IsNullOrEmpty(book_id))
+                {
+                    return BadRequest(new GetFinalOrgsSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "400",
+                        Message = "book_id is required",
+                        QueriedBy = user_ad
+                    });
+                }
+
+                // Call real eSaraban External API (no alert)
+                _logger.LogInformation("Calling eSaraban API to get final organizations (K2 Simple - no alert)...");
+                var apiResponse = await _esarabanApi.GetFinalOrgsByActionNoAlertAsync(user_ad, book_id);
+
+                if (apiResponse == null)
+                {
+                    _logger.LogError("Failed to call eSaraban GetFinalOrgsByActionNoAlert API");
+                    return StatusCode(503, new GetFinalOrgsSimpleResponse
+                    {
+                        Status = "E",
+                        StatusCode = "503",
+                        Message = "Failed to connect to eSaraban API. Please try again later.",
+                        BookId = book_id,
+                        QueriedBy = user_ad,
+                        QueriedDate = DateTime.Now
+                    });
+                }
+
+                // Convert to K2 Flat response (First record only)
+                var simpleResponse = new GetFinalOrgsSimpleResponse
+                {
+                    Status = apiResponse.Status,
+                    StatusCode = apiResponse.StatusCode,
+                    Message = apiResponse.Books?.Count > 0 ? $"Found {apiResponse.Books.Count} organization(s), returning first record only" : "No organizations found",
+                    BookId = book_id,
+                    TotalOrganizations = apiResponse.Books?.Count ?? 0,
+                    QueryType = "no_alert",
+                    QueriedBy = user_ad,
+                    QueriedDate = DateTime.Now
+                };
+
+                // Fill first organization data (if exists)
+                if (apiResponse.Books != null && apiResponse.Books.Count > 0)
+                {
+                    var firstOrg = apiResponse.Books[0];
+                    simpleResponse.RunningNo = firstOrg.RunningNo;
+                    simpleResponse.SendOrgNameTh = firstOrg.SendOrgNameTh ?? string.Empty;
+                    simpleResponse.SendDate = firstOrg.SendDate ?? string.Empty;
+                    simpleResponse.ReceiveCode = firstOrg.ReceiveCode;
+                    simpleResponse.ReceiveDate = firstOrg.ReceiveDate;
+                    simpleResponse.ReceiveOrgNameTh = firstOrg.ReceiveOrgNameTh ?? string.Empty;
+                    simpleResponse.StatusNameTh = firstOrg.StatusNameTh ?? string.Empty;
+                    simpleResponse.ReceiveComment = firstOrg.ReceiveComment;
+                }
+
+                _logger.LogInformation($"K2 Simple response created (no alert): {simpleResponse.TotalOrganizations} organization(s) found");
+
+                // Return K2 Compatible Flat JSON
+                return Ok(simpleResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetFinalOrgsByActionNoAlertSimple: {ex.Message}");
+
+                return StatusCode(500, new GetFinalOrgsSimpleResponse
+                {
+                    Status = "E",
+                    StatusCode = "500",
+                    Message = $"Error retrieving final organizations: {ex.Message}",
+                    BookId = book_id ?? string.Empty,
+                    QueriedBy = user_ad ?? "Unknown",
+                    QueriedDate = DateTime.Now
+                });
+            }
+        }
+
         // ============================================================================
         // Combined Workflow APIs - Create + Generate-Code + Transfer
         // ============================================================================
@@ -1221,15 +1697,46 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
         /// <summary>
         /// Workflow แบบครบวงจร: สร้างเอกสาร (Approved) → สร้างรหัส → โอนย้าย
         /// </summary>
+        /// <remarks>
+        /// ตัวอย่าง Response (Flat, K2-compatible):
+        ///
+        /// ```json
+        /// {
+        ///   "status": "S",
+        ///   "statusCode": "200",
+        ///   "message": "Success: workflow completed (create → generate → transfer).",
+        ///   "book_id": "0CEB9F7B3BF144E097CD6871FE177D1F",
+        ///   "file_count": 0,
+        ///   "attach_count": 0,
+        ///   "create_message": "เอกสารถูกสร้างสำเร็จ (กรณีอนุมัติ/เข้าสู่หลักเกณ์)",
+        ///   "generated_code": "กกท 14/12",
+        ///   "to_date": "04/11/2568",
+        ///   "code_type": "DOCUMENT",
+        ///   "generated_date": "2025-11-07T10:30:00Z",
+        ///   "generate_message": "รหัสเอกสารถูกสร้างสำเร็จ",
+        ///   "transfer_id": "b23468c1-dfc7-47d9-bd26-6faf96e0a82e",
+        ///   "original_org_code": "J10100",
+        ///   "destination_org_code": "J10000",
+        ///   "transfer_status": "COMPLETED",
+        ///   "transferred_date": "2025-11-07T10:31:00Z",
+        ///   "transfer_message": "โอนย้าย Book สำเร็จ",
+        ///   "workflow_type": "APPROVED",
+        ///   "executed_by": "EXAT\\\\ECMUSR07",
+        ///   "workflow_completed": "2025-11-07T10:31:05Z",
+        ///   "overall_message": "Workflow สำเร็จ: สร้างเอกสาร → สร้างรหัส → โอนย้าย (Book: กกท 14/12, Transfer: b23468c1-dfc7-47d9-bd26-6faf96e0a82e)"
+        /// }
+        /// ```
+        /// </remarks>
         [HttpPost("workflow/approved")]
         [SwaggerOperation(
             Summary = "Workflow: สร้างเอกสาร (Approved) + Generate Code + Transfer",
             Description = "API แบบครบวงจร ทำงาน 3 ขั้นตอน: 1) สร้างเอกสาร (กรณีอนุมัติ) 2) สร้างรหัสเอกสาร 3) โอนย้ายเอกสาร - ทั้งหมดในคำขอเดียว",
             Tags = new[] { "Books - Workflow (Combined)" }
         )]
-        [SwaggerResponse(200, "Success - Workflow สำเร็จทั้ง 3 ขั้นตอน", typeof(ApiResponse<CreateGenerateTransferResponse>))]
-        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ครบถ้วน", typeof(ApiResponse<object>))]
-        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาด", typeof(ApiResponse<object>))]
+        // K2 Compatible: Flat response model (no ApiResponse wrapper)
+        [SwaggerResponse(200, "Success - Workflow สำเร็จทั้ง 3 ขั้นตอน", typeof(CreateGenerateTransferResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ครบถ้วน", typeof(CreateGenerateTransferResponse))]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาด", typeof(CreateGenerateTransferResponse))]
         public async Task<IActionResult> WorkflowApproved(
             [FromBody, SwaggerRequestBody("Request Body แบบเดียวกับ /api/books/create/approved/simple (ส่งเฉพาะฟิลด์ของ Simple Create)", Required = true)] CreateGenerateTransferApprovedRequest request,
             [FromQuery, SwaggerParameter("รหัสองค์กรต้นทาง (ถ้าไม่ส่งใน Body สามารถส่งผ่าน Query ได้)")] string? original_org_code,
@@ -1411,15 +1918,35 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
         /// <summary>
         /// Workflow แบบครบวงจร: สร้างเอกสาร (Non-Compliant) → สร้างรหัส → โอนย้าย
         /// </summary>
+        /// <remarks>
+        /// ตัวอย่าง Response (Flat, K2-compatible):
+        ///
+        /// ```json
+        /// {
+        ///   "status": "S",
+        ///   "statusCode": "200",
+        ///   "message": "Success: workflow completed (create → generate → transfer).",
+        ///   "workflow_type": "NON-COMPLIANT",
+        ///   "book_id": "...",
+        ///   "generated_code": "...",
+        ///   "to_date": "...",
+        ///   "transfer_id": "...",
+        ///   "original_org_code": "J10100",
+        ///   "destination_org_code": "J10000",
+        ///   "transfer_status": "COMPLETED"
+        /// }
+        /// ```
+        /// </remarks>
         [HttpPost("workflow/non-compliant")]
         [SwaggerOperation(
             Summary = "Workflow: สร้างเอกสาร (Non-Compliant) + Generate Code + Transfer",
             Description = "API แบบครบวงจร ทำงาน 3 ขั้นตอน: 1) สร้างเอกสาร (กรณีไม่เข้าหลักเกณ์) 2) สร้างรหัสเอกสาร 3) โอนย้ายเอกสาร - ทั้งหมดในคำขอเดียว",
             Tags = new[] { "Books - Workflow (Combined)" }
         )]
-        [SwaggerResponse(200, "Success - Workflow สำเร็จทั้ง 3 ขั้นตอน", typeof(ApiResponse<CreateGenerateTransferResponse>))]
-        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ครบถ้วน", typeof(ApiResponse<object>))]
-        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาด", typeof(ApiResponse<object>))]
+        // K2 Compatible: Flat response model (no ApiResponse wrapper)
+        [SwaggerResponse(200, "Success - Workflow สำเร็จทั้ง 3 ขั้นตอน", typeof(CreateGenerateTransferResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ครบถ้วน", typeof(CreateGenerateTransferResponse))]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาด", typeof(CreateGenerateTransferResponse))]
         public async Task<IActionResult> WorkflowNonCompliant(
             [FromBody, SwaggerRequestBody("Request Body แบบเดียวกับ /api/books/create/non-compliant/simple (ส่งเฉพาะฟิลด์ของ Simple Create)", Required = true)] CreateGenerateTransferNonCompliantRequest request,
             [FromQuery, SwaggerParameter("รหัสองค์กรต้นทาง (ถ้าไม่ส่งใน Body สามารถส่งผ่าน Query ได้)")] string? original_org_code,
@@ -1602,15 +2129,35 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
         /// <summary>
         /// Workflow แบบครบวงจร: สร้างเอกสาร (Under-Construction) → สร้างรหัส → โอนย้าย
         /// </summary>
+        /// <remarks>
+        /// ตัวอย่าง Response (Flat, K2-compatible):
+        ///
+        /// ```json
+        /// {
+        ///   "status": "S",
+        ///   "statusCode": "200",
+        ///   "message": "Success: workflow completed (create → generate → transfer).",
+        ///   "workflow_type": "UNDER-CONSTRUCTION",
+        ///   "book_id": "...",
+        ///   "generated_code": "...",
+        ///   "to_date": "...",
+        ///   "transfer_id": "...",
+        ///   "original_org_code": "J10100",
+        ///   "destination_org_code": "J10000",
+        ///   "transfer_status": "COMPLETED"
+        /// }
+        /// ```
+        /// </remarks>
         [HttpPost("workflow/under-construction")]
         [SwaggerOperation(
             Summary = "Workflow: สร้างเอกสาร (Under-Construction) + Generate Code + Transfer",
             Description = "API แบบครบวงจร ทำงาน 3 ขั้นตอน: 1) สร้างเอกสาร (กรณีอยู่ระหว่างก่อสร้าง) 2) สร้างรหัสเอกสาร 3) โอนย้ายเอกสาร - ทั้งหมดในคำขอเดียว",
             Tags = new[] { "Books - Workflow (Combined)" }
         )]
-        [SwaggerResponse(200, "Success - Workflow สำเร็จทั้ง 3 ขั้นตอน", typeof(ApiResponse<CreateGenerateTransferResponse>))]
-        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ครบถ้วน", typeof(ApiResponse<object>))]
-        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาด", typeof(ApiResponse<object>))]
+        // K2 Compatible: Flat response model (no ApiResponse wrapper)
+        [SwaggerResponse(200, "Success - Workflow สำเร็จทั้ง 3 ขั้นตอน", typeof(CreateGenerateTransferResponse))]
+        [SwaggerResponse(400, "Bad Request - ข้อมูลไม่ครบถ้วน", typeof(CreateGenerateTransferResponse))]
+        [SwaggerResponse(500, "Server Error - เกิดข้อผิดพลาด", typeof(CreateGenerateTransferResponse))]
         public async Task<IActionResult> WorkflowUnderConstruction(
             [FromBody, SwaggerRequestBody("Request Body แบบเดียวกับ /api/books/create/under-construction/simple (ส่งเฉพาะฟิลด์ของ Simple Create)", Required = true)] CreateGenerateTransferUnderConstructionRequest request,
             [FromQuery, SwaggerParameter("รหัสองค์กรต้นทาง (ถ้าไม่ส่งใน Body สามารถส่งผ่าน Query ได้)")] string? original_org_code,

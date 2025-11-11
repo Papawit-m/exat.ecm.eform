@@ -5,6 +5,8 @@ using EXAT.ECM.EER.ESARABAN.Models;
 using EXAT.ECM.EER.ESARABAN.Middleware;
 using Microsoft.EntityFrameworkCore;
 using EXAT.ECM.EER.ESARABAN.DAL;
+using Microsoft.Extensions.Options;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,9 +23,9 @@ builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddDbContext<OracleDbContext>(options =>
 //    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
 
-builder.Services.AddDbContext<OracleDbContext>(options =>
-        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING"))
-    );
+//builder.Services.AddDbContext<OracleDbContext>(options =>
+//        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING"))
+//    );
 
 // Strongly-typed options
 builder.Services.Configure<ESarabanApiSettings>(
@@ -74,6 +76,14 @@ builder.Services.AddSwaggerGen(o =>
         Contact = new OpenApiContact { Name = "API Support", Email = "support@example.com" }
     });
     o.EnableAnnotations();
+
+    // Include XML comments (for controllers and models) so Swagger shows detailed remarks/examples
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        o.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
 });
 
 builder.Services.AddCors(o =>

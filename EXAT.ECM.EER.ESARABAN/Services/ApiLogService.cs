@@ -8,8 +8,8 @@ namespace EXAT.ECM.EER.ESARABAN.Services
     public interface IApiLogService
     {
         Task LogRequestAsync(ApiLogEntry logEntry);
-        Task LogErrorAsync(string endpoint, string httpMethod, string username, Exception ex, string? requestBody = null);
-        Task LogSuccessAsync(string endpoint, string httpMethod, string username, int statusCode, long executionTime, string? requestBody = null, string? responseData = null);
+        Task LogErrorAsync(string endpoint, string httpMethod, string username, Exception ex, string? requestBody = null, string? requestPath = null);
+        Task LogSuccessAsync(string endpoint, string httpMethod, string username, int statusCode, long executionTime, string? requestBody = null, string? responseData = null, string? successFlag = null, string? logLevel = null, string? requestPath = null);
     }
 
     public class ApiLogService : IApiLogService
@@ -20,10 +20,8 @@ namespace EXAT.ECM.EER.ESARABAN.Services
 
         public ApiLogService(IConfiguration configuration, ILogger<ApiLogService> logger)
         {
-            //_connectionString = configuration.GetConnectionString("OracleConnection")
-            //    ?? throw new InvalidOperationException("Oracle connection string not found");
-
-            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            _connectionString = configuration.GetConnectionString("OracleConnection")
+                ?? throw new InvalidOperationException("Oracle connection string not found");
             _logger = logger;
             // Read sequence configuration (schema + sequence). If not provided, fallback to legacy name.
             var apiLogSection = configuration.GetSection("ApiLog");
@@ -122,14 +120,14 @@ namespace EXAT.ECM.EER.ESARABAN.Services
         /// <summary>
         /// บันทึก Error Log
         /// </summary>
-        public async Task LogErrorAsync(string endpoint, string httpMethod, string username, Exception ex, string? requestBody = null)
+        public async Task LogErrorAsync(string endpoint, string httpMethod, string username, Exception ex, string? requestBody = null, string? requestPath = null)
         {
             var logEntry = new ApiLogEntry
             {
                 LogLevel = "ERROR",
                 Endpoint = endpoint,
                 HttpMethod = httpMethod,
-                RequestPath = endpoint,
+                RequestPath = requestPath ?? endpoint,
                 RequestParameters = requestBody,
                 Username = username,
                 StatusCode = 500,
@@ -147,18 +145,18 @@ namespace EXAT.ECM.EER.ESARABAN.Services
         /// <summary>
         /// บันทึก Success Log
         /// </summary>
-        public async Task LogSuccessAsync(string endpoint, string httpMethod, string username, int statusCode, long executionTime, string? requestBody = null, string? responseData = null)
+        public async Task LogSuccessAsync(string endpoint, string httpMethod, string username, int statusCode, long executionTime, string? requestBody = null, string? responseData = null, string? successFlag = null, string? logLevel = null, string? requestPath = null)
         {
             var logEntry = new ApiLogEntry
             {
-                LogLevel = "INFO",
+                LogLevel = logLevel ?? "INFO",
                 Endpoint = endpoint,
                 HttpMethod = httpMethod,
-                RequestPath = endpoint,
+                RequestPath = requestPath ?? endpoint,
                 RequestParameters = requestBody,
                 Username = username,
                 StatusCode = statusCode,
-                SuccessFlag = "Y",
+                SuccessFlag = successFlag ?? "Y",
                 Message = responseData ?? "Success",
                 ErrorMessage = null,
                 ExecutionTime = executionTime,

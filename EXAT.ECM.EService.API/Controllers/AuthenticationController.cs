@@ -186,6 +186,7 @@ namespace EXAT.ECM.EService.API.Controllers
                             ,result.Data.LoginData.Title
                             ,result.Data.LoginData.FirstName
                             ,result.Data.LoginData.LastName
+                            ,result.Data.LoginData.PhoneNo
                             ,result.Data.LoginData.CreatedAt
                             ,result.Data.LoginData.CreatedBy
                             ,result.Data.LoginData.Active

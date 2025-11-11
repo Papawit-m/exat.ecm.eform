@@ -2,7 +2,6 @@
 
 namespace EXAT.ECM.EER.ESARABAN.Models
 {
-
     // ============================================================================
     // eSaraban API Models - ตาม api_create.txt specification
     // ============================================================================
@@ -1210,6 +1209,86 @@ namespace EXAT.ECM.EER.ESARABAN.Models
         public DateTime TransferredDate { get; set; }
     }
 
+    /// <summary>
+    /// Transfer Book Simple Response (K2 Compatible - Flat JSON)
+    /// ใช้สำหรับ /api/books/transfer/simple endpoint
+    /// ไม่มี ApiResponse wrapper - K2 SmartObjects สามารถอ่านได้โดยตรง
+    /// </summary>
+    public class TransferBookSimpleResponse
+    {
+        /// <summary>
+        /// สถานะการทำงาน (S=Success, E=Error)
+        /// </summary>
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "S";
+
+        /// <summary>
+        /// รหัสสถานะ HTTP
+        /// </summary>
+        [JsonPropertyName("statusCode")]
+        public string StatusCode { get; set; } = "200";
+
+        /// <summary>
+        /// ข้อความตอบกลับจาก API
+        /// </summary>
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Book ID ที่โอนย้าย
+        /// </summary>
+        [JsonPropertyName("book_id")]
+        public string BookId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Transfer ID (GUID หรือ "null")
+        /// </summary>
+        [JsonPropertyName("transfer_id")]
+        public string TransferId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// รหัสองค์กรต้นทาง (J-prefix, e.g., J10100)
+        /// </summary>
+        [JsonPropertyName("original_org_code")]
+        public string OriginalOrgCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// รหัสองค์กรปลายทาง (J-prefix, e.g., J10200)
+        /// </summary>
+        [JsonPropertyName("destination_org_code")]
+        public string DestinationOrgCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// เหตุผลการโอนย้าย
+        /// </summary>
+        [JsonPropertyName("transfer_reason")]
+        public string TransferReason { get; set; } = string.Empty;
+
+        /// <summary>
+        /// หมายเหตุการโอนย้าย
+        /// </summary>
+        [JsonPropertyName("transfer_note")]
+        public string? TransferNote { get; set; }
+
+        /// <summary>
+        /// สถานะการโอนย้าย (COMPLETED, PENDING, etc.)
+        /// </summary>
+        [JsonPropertyName("transfer_status")]
+        public string TransferStatus { get; set; } = string.Empty;
+
+        /// <summary>
+        /// ผู้โอนย้าย (Active Directory username)
+        /// </summary>
+        [JsonPropertyName("transferred_by")]
+        public string TransferredBy { get; set; } = string.Empty;
+
+        /// <summary>
+        /// วันเวลาที่โอนย้าย
+        /// </summary>
+        [JsonPropertyName("transferred_date")]
+        public DateTime TransferredDate { get; set; }
+    }
+
     // ============================================================================
     // Final Organizations Models
     // ============================================================================
@@ -1496,4 +1575,113 @@ namespace EXAT.ECM.EER.ESARABAN.Models
         public string OverallMessage { get; set; } = string.Empty;
     }
 
+    // ============================================================================
+    // K2 SmartObject Compatible Models - Query Endpoints (Flat JSON - Single Record)
+    // ============================================================================
+
+    /// <summary>
+    /// K2 Compatible Response Model สำหรับ Get Final Organizations (Simple/Flat)
+    /// ไม่มี Array, ส่งแค่ Organization แรกที่พบ (First Record Only)
+    /// สำหรับ K2 SmartObject ที่อ่าน Flat JSON ได้เท่านั้น
+    /// </summary>
+    public class GetFinalOrgsSimpleResponse
+    {
+        /// <summary>
+        /// สถานะการตอบกลับ (S = Success, E = Error)
+        /// </summary>
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "S";
+
+        /// <summary>
+        /// รหัสสถานะ HTTP
+        /// </summary>
+        [JsonPropertyName("statusCode")]
+        public string StatusCode { get; set; } = "200";
+
+        /// <summary>
+        /// ข้อความตอบกลับ
+        /// </summary>
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Book ID
+        /// </summary>
+        [JsonPropertyName("book_id")]
+        public string BookId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// จำนวนองค์กรทั้งหมดที่พบ
+        /// </summary>
+        [JsonPropertyName("total_organizations")]
+        public int TotalOrganizations { get; set; }
+
+        // =============== First Organization Info (Flat) ===============
+
+        /// <summary>
+        /// ลำดับที่ (Organization แรก)
+        /// </summary>
+        [JsonPropertyName("running_no")]
+        public int RunningNo { get; set; }
+
+        /// <summary>
+        /// ชื่อองค์กรผู้ส่ง (Thai)
+        /// </summary>
+        [JsonPropertyName("send_org_nameth")]
+        public string SendOrgNameTh { get; set; } = string.Empty;
+
+        /// <summary>
+        /// วันที่ส่ง (DD-MMM-YY format)
+        /// </summary>
+        [JsonPropertyName("send_date")]
+        public string SendDate { get; set; } = string.Empty;
+
+        /// <summary>
+        /// รหัสการรับ
+        /// </summary>
+        [JsonPropertyName("receive_code")]
+        public string? ReceiveCode { get; set; }
+
+        /// <summary>
+        /// วันที่รับ
+        /// </summary>
+        [JsonPropertyName("receive_date")]
+        public string? ReceiveDate { get; set; }
+
+        /// <summary>
+        /// ชื่อองค์กรผู้รับ (Thai) - รวมรหัสและชื่อ (e.g., "J10000 กองที่ดิน")
+        /// </summary>
+        [JsonPropertyName("receive_org_nameth")]
+        public string ReceiveOrgNameTh { get; set; } = string.Empty;
+
+        /// <summary>
+        /// สถานะ (Thai) - เช่น "รอดำเนินการรับหนังสือ"
+        /// </summary>
+        [JsonPropertyName("status_nameth")]
+        public string StatusNameTh { get; set; } = string.Empty;
+
+        /// <summary>
+        /// ความคิดเห็น
+        /// </summary>
+        [JsonPropertyName("receive_comment")]
+        public string? ReceiveComment { get; set; }
+
+        /// <summary>
+        /// ประเภทการดึงข้อมูล (with_alert / no_alert)
+        /// </summary>
+        [JsonPropertyName("query_type")]
+        public string QueryType { get; set; } = string.Empty;
+
+        /// <summary>
+        /// ผู้ดึงข้อมูล (User AD)
+        /// </summary>
+        [JsonPropertyName("queried_by")]
+        public string QueriedBy { get; set; } = string.Empty;
+
+        /// <summary>
+        /// วันที่ดึงข้อมูล
+        /// </summary>
+        [JsonPropertyName("queried_date")]
+        public DateTime QueriedDate { get; set; }
+    }
 }
