@@ -1,0 +1,103 @@
+
+
+{
+  "user_ad": "EXAT\\ECMUSR07",
+  "book": {
+    "book_owner": "aliquip labore reprehenderit ea in",
+    "book_subject": "non dolore",
+    "book_to": "สผว.",
+    "book_originaldocumentdetail": "officia magna aliquip ex",
+    "book_searchterm": "et deserunt anim",
+    "book_remark": "elit deserunt ad officia sint",
+    "registrationbook_id": "E1786792382247A49DD27072718DB187",
+    "registrationbook_nameth": "สมุดทะเบียนส่ง",
+    "registrationbook_nameen": "ipsum",
+    "registrationbook_ogr_id": "AB5C943827A4445286C3A0BC8D10CF82",
+    "registrationbook_org_code": "AG0101",
+    "registrationbook_org_nameth": "แผนกบริหารงานกลาง",
+    "registrationbook_org_nameen": "Central Administration Section",
+    "registrationbook_org_shtname": "บร.",
+    "booktype_id": 93,
+    "sendtype_id": 1,
+    "format_id": 2,
+    "subformat_id": 0,
+    "speed_id": 1,
+    "secret_id": 1,
+    "optiondate_id": 1,
+    "optionlanguage_id": 1,
+    "optionno_id": 1,
+    "status_id": 1,
+    "request_org_code": "AG0101",
+    "create_page": 1,
+    "parent_bookid": "",
+    "parent_orgid": "",
+    "parent_orgcode": "",
+    "law_id": "",
+    "law_code": "",
+    "is_circular": 0,
+    "parent_positioncode": "",
+    "parent_positionname": ""
+  },
+  "bookAttach": [
+     {
+      "file_content": null,
+	  "file_name": null,
+      "file_extension": null,
+      "file_path": null,
+      "file_url": null,
+      "file_remark": null,
+      "alfresco_parentid": null,
+      "alfresco_foldername": null,
+      "alfresco_nodetype": null,
+      "alfresco_noderef": null,
+      "alfresco_nodeid": null
+    }
+  ],
+  "bookFile": [
+    {
+      "file_content": "",
+      "file_name": "แจ้งผลการดำเนินการร้องทุกข์_TEST (3).pdf",
+      "file_extension": "pdf",
+      "file_path": "",
+      "file_url": "",
+      "file_remark": "Test แจ้งผลการดำเนินการ",
+      "alfresco_parentid": "",
+      "alfresco_foldername": "",
+      "alfresco_nodetype": "",
+      "alfresco_noderef": "",
+      "alfresco_nodeid": "",
+      "originaL_NODEID": ""
+    }
+  ],
+  "bookHistory": [
+    {
+      "tranfer_id": null
+    }
+  ],
+  "bookReferences": [
+    {
+      "referencetype_id": 2,
+      "referencetype_name": "กำหนดเอง",
+      "reference_bookid": "",
+      "reference_bookcode": "รบ/1",
+      "reference_bookdate": "2025-06-09T10:45:47.922Z",
+      "reference_subject": "เรื่อง การประเมินหนังสือ",
+      "is_active": 1
+    }
+  ],
+  "bookReferenceAttach": [
+    {
+      "file_content": "",
+      "file_name": "ข้อเสนอแนะที่สำคัญต่อรัฐบาล.pdf",
+      "file_extension": "pdf",
+      "file_path": null,
+      "file_url": null,
+      "file_remark": "ทดสอบ",
+      "alfresco_parentid": null,
+      "alfresco_foldername": null,
+      "alfresco_nodetype": null,
+      "alfresco_noderef": null,
+      "alfresco_nodeid": null
+    }
+  ]
+}

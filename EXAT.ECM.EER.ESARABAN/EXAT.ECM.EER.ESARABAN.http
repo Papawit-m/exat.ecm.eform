@@ -1,0 +1,6 @@
+@EXAT.ECM.EER.ESARABAN_HostAddress = http://localhost:5262
+
+GET {{EXAT.ECM.EER.ESARABAN_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

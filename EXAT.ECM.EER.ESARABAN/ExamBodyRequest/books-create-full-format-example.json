@@ -1,0 +1,106 @@
+{
+  "user_ad": "EXAT\\ECMUSR07",
+  "book": {
+    "book_owner": "นาย ทดสอบ ระบบ - Full Format Example",
+    "book_subject": "ตัวอย่าง Full Format API Request - ครบทุก Fields",
+    "book_to": "สำนักงานผู้อำนวยการใหญ่",
+    "book_originaldocumentdetail": "รายละเอียดเอกสารต้นฉบับ ตัวอย่าง Full Request",
+    "book_searchterm": "คำค้นหา, ตัวอย่าง, Full API, Testing",
+    "book_remark": "หมายเหตุการทดสอบ Full Format Request Body - Example",
+    "registrationbook_id": "E1786792382247A49DD27072718DB187",
+    "registrationbook_nameth": "สมุดทะเบียนส่ง",
+    "registrationbook_nameen": "Outgoing Document Register",
+    "registrationbook_ogr_id": "AB5C943827A4445286C3A0BC8D10CF82",
+    "registrationbook_org_code": "AG0101",
+    "registrationbook_org_nameth": "แผนกบริหารงานกลาง",
+    "registrationbook_org_nameen": "Central Administration Section",
+    "registrationbook_org_shtname": "บร.",
+    "booktype_id": 93,
+    "sendtype_id": 1,
+    "format_id": 2,
+    "subformat_id": 0,
+    "speed_id": 1,
+    "secret_id": 1,
+    "optiondate_id": 1,
+    "optionlanguage_id": 1,
+    "optionno_id": 1,
+    "status_id": 1,
+    "request_org_code": "AG0101",
+    "create_page": 1,
+    "parent_bookid": "550e8400-e29b-41d4-a716-446655440000",
+    "parent_orgid": "J10100",
+    "parent_orgcode": "J10100",
+    "law_id": "",
+    "law_code": "",
+    "is_circular": 0,
+    "parent_positioncode": "",
+    "parent_positionname": "หัวหน้าฝ่าย"
+  },
+  "bookFile": [
+    {
+      "file_name": "เอกสารหลัก.pdf",
+      "file_extension": "pdf",
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_path": "/documents/books",
+      "file_url": "http://alfresco.exat.co.th/docs/main.pdf",
+      "file_remark": "ไฟล์เอกสารหลัก",
+      "alfresco_foldername": "Books",
+      "alfresco_nodetype": "cm:content"
+    }
+  ],
+  "bookAttach": [
+    {
+      "file_name": "เอกสารแนบ1.pdf",
+      "file_extension": "pdf",
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_path": "/documents/attachments",
+      "file_remark": "เอกสารแนบที่ 1",
+      "alfresco_foldername": "Attachments",
+      "alfresco_nodetype": "cm:content"
+    },
+    {
+      "file_name": "เอกสารแนบ2.jpg",
+      "file_extension": "jpg",
+      "file_content": "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/gA==",
+      "file_path": "/documents/attachments",
+      "file_remark": "รูปภาพประกอบ",
+      "alfresco_foldername": "Attachments"
+    }
+  ],
+  "bookHistory": [
+    {
+      "action": "CREATE",
+      "action_by": "EXAT\\TESTUSER01",
+      "remark": "สร้างเอกสารผ่าน K2 REST API - Full Format Example"
+    }
+  ],
+  "bookReferences": [
+    {
+      "referencetype_id": 2,
+      "referencetype_name": "กำหนดเอง",
+      "reference_bookid": "550e8400-e29b-41d4-a716-446655440001",
+      "reference_bookcode": "รบ/1234",
+      "reference_bookdate": "2025-10-15T10:45:47.922Z",
+      "reference_subject": "เรื่อง การประเมินหนังสือที่เกี่ยวข้อง",
+      "is_active": "1"
+    },
+    {
+      "referencetype_id": 1,
+      "referencetype_name": "อ้างอิง",
+      "reference_bookid": "550e8400-e29b-41d4-a716-446655440002",
+      "reference_bookcode": "รบ/5678",
+      "reference_bookdate": "2025-10-20T14:30:00Z",
+      "reference_subject": "เรื่อง เอกสารอ้างอิงที่สอง",
+      "is_active": "1"
+    }
+  ],
+  "bookReferenceAttach": [
+    {
+      "reference_bookid": "550e8400-e29b-41d4-a716-446655440001",
+      "file_name": "เอกสารอ้างอิง1.pdf",
+      "file_extension": "pdf",
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_remark": "ไฟล์แนบของเอกสารอ้างอิง 1"
+    }
+  ]
+}
