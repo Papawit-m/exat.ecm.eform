@@ -268,7 +268,7 @@ namespace EXAT.ECM.EER.ESARABAN.Services
         {
             try
             {
-                var endpoint = $"/api/books/final-orgs/by-action?user_ad={Uri.EscapeDataString(userAd)}&book_id={Uri.EscapeDataString(bookId)}";
+                var endpoint = $"{_settings.Endpoints.BooksFinalOrgsByAction}?user_ad={Uri.EscapeDataString(userAd)}&book_id={Uri.EscapeDataString(bookId)}";
                 _logger.LogInformation($"Calling eSaraban API: GET {endpoint}");
 
                 var response = await _httpClient.GetAsync(endpoint);
@@ -308,7 +308,7 @@ namespace EXAT.ECM.EER.ESARABAN.Services
         {
             try
             {
-                var endpoint = $"/api/books/final-orgs/by-action/no-alert?user_ad={Uri.EscapeDataString(userAd)}&book_id={Uri.EscapeDataString(bookId)}";
+                var endpoint = $"{_settings.Endpoints.BooksFinalOrgsByActionNoAlert}?user_ad={Uri.EscapeDataString(userAd)}&book_id={Uri.EscapeDataString(bookId)}";
                 _logger.LogInformation($"Calling eSaraban API: GET {endpoint}");
 
                 var response = await _httpClient.GetAsync(endpoint);

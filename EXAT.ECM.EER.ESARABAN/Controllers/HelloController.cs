@@ -103,7 +103,7 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                         ESarabanResponse = null,
                         ConnectionInfo = new ConnectionInfo
                         {
-                            BaseUrl = "http://api-uat.exat.co.th/esrb-external-api",
+                            BaseUrl = "https://api-uat.exat.co.th/esrb-external-api",
                             ProxyEnabled = true,
                             SslValidation = "bypassed (development)",
                             Timeout = "30s"

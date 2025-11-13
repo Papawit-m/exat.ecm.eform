@@ -1,8 +1,9 @@
-﻿using EXAT.ECM.EER.ESARABAN.Models;
+using EXAT.ECM.EER.ESARABAN.Models;
 using EXAT.ECM.EER.ESARABAN.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Text.Json.Serialization;
 
 namespace EXAT.ECM.EER.ESARABAN.Controllers
 {
@@ -188,7 +189,24 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                 _logger.LogInformation($"Book created successfully with ID: {response.BookId} (from eSaraban API)");
 
                 // K2 Compatible: Return direct response without ApiResponse wrapper
-                return Ok(response);
+                return Ok(new { response.Status
+                              , response.StatusCode
+                              , response.Message
+                              , response.BookId
+                              , response.BookSubject
+                              , response.BookTo
+                              , response.RegistrationBookId
+                              , response.ParentBookId
+                              , response.ParentOrgId
+                              , response.ParentPositionName
+                              , response.BookTypeId
+                              , response.BookFile
+                              , response.FileCount
+                              , response.BookAttach
+                              , response.AttachCount
+                              , response.CreatedBy
+                              , response.CreatedDate
+                });
             }
             catch (Exception ex)
             {
@@ -1853,10 +1871,42 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
 
                 _logger.LogInformation($"Step 2 completed: generated_code={generatedCode}, to_date={toDate} (from eSaraban API)");
 
-                // ========== Step 3: Transfer Book ==========
-                _logger.LogInformation("Step 3: Transferring book...");
+                // ========== Step 3: Transfer Book (Call eSaraban API) ==========
+                _logger.LogInformation("Step 3: Transferring book via eSaraban API...");
 
                 string transferId = string.IsNullOrWhiteSpace(tranfer_id) ? Guid.NewGuid().ToString() : tranfer_id;
+
+                // Create transfer request
+                var transferRequest = new TransferBookRequest
+                {
+                    TransferReason = request.transfer_reason ?? "Workflow Transfer",
+                    TransferNote = request.transfer_note
+                };
+
+                var transferApiResponse = await _esarabanApi.TransferBookAsync(
+                    request.user_ad,
+                    bookId,
+                    transferId,
+                    request.original_org_code,
+                    request.destination_org_code,
+                    transferRequest
+                );
+
+                if (transferApiResponse == null)
+                {
+                    _logger.LogError("Failed to call eSaraban TransferBook API");
+                    
+                    var errorResponse = new CreateGenerateTransferResponse
+                    {
+                        Status = "E",
+                        StatusCode = "503",
+                        Message = "Failed to connect to eSaraban API (Transfer Book). Please try again later.",
+                        BookId = bookId,
+                        GeneratedCode = generatedCode,
+                        ToDate = toDate
+                    };
+                    return StatusCode(503, errorResponse);
+                }
 
                 _logger.LogInformation($"Step 3 completed: transfer_id={transferId}");
 
@@ -1898,7 +1948,30 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                 _logger.LogInformation($"WorkflowApproved completed successfully: {response.GeneratedCode}");
 
                 // K2 Compatible: Return direct response without ApiResponse wrapper
-                return Ok(response);
+                return Ok(new { response.Status
+                              , response.StatusCode
+                              , response.Message
+                              , response.BookId
+                              , response.FileCount
+                              , response.AttachCount
+                              , response.CreateMessage
+                              , response.GeneratedCode
+                              , response.ToDate
+                              , response.CodeType
+                              , response.GeneratedDate
+                              , response.GenerateMessage
+                              , response.TransferId
+                              , response.OriginalOrgCode
+                              , response.DestinationOrgCode
+                              , response.TransferStatus
+                              , response.TransferredDate
+                              , response.TransferMessage
+                              , response.WorkflowType
+                              ,response.ExecutedBy
+                              , response.WorkflowCompleted
+                              , response.OverallMessage                
+                             }
+                );
             }
             catch (Exception ex)
             {
@@ -2064,12 +2137,44 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
 
                 _logger.LogInformation($"Step 2 completed: generated_code={generatedCode}, to_date={toDate} (from eSaraban API)");
 
-                // ========== Step 3: Transfer Book ==========
-                _logger.LogInformation("Step 3: Transferring book...");
+                // ========== Step 3: Transfer Book (Call eSaraban API) ==========
+                _logger.LogInformation("Step 3: Transferring book via eSaraban API...");
 
                 string transferId = string.IsNullOrWhiteSpace(tranfer_id) ? Guid.NewGuid().ToString() : tranfer_id;
 
-                _logger.LogInformation($"Step 3 completed: transfer_id={transferId}");
+                // Create transfer request
+                var transferRequest = new TransferBookRequest
+                {
+                    TransferReason = request.transfer_reason ?? "Workflow Transfer",
+                    TransferNote = request.transfer_note
+                };
+
+                var transferApiResponse = await _esarabanApi.TransferBookAsync(
+                    request.user_ad,
+                    bookId,
+                    transferId,
+                    request.original_org_code,
+                    request.destination_org_code,
+                    transferRequest
+                );
+
+                if (transferApiResponse == null)
+                {
+                    _logger.LogError("Failed to call eSaraban TransferBook API");
+                    
+                    var errorResponse = new CreateGenerateTransferResponse
+                    {
+                        Status = "E",
+                        StatusCode = "503",
+                        Message = "Failed to connect to eSaraban API (Transfer Book). Please try again later.",
+                        BookId = bookId,
+                        GeneratedCode = generatedCode,
+                        ToDate = toDate
+                    };
+                    return StatusCode(503, errorResponse);
+                }
+
+                _logger.LogInformation($"Step 3 completed: transfer_id={transferId}, status={transferApiResponse.Status} (from eSaraban API)");
 
                 // ========== Build Response (K2 Compatible) ==========
                 var response = new CreateGenerateTransferResponse
@@ -2109,7 +2214,30 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                 _logger.LogInformation($"WorkflowNonCompliant completed successfully: {response.GeneratedCode}");
 
                 // K2 Compatible: Return direct response without ApiResponse wrapper
-                return Ok(response);
+                return Ok(new { response.Status
+                              , response.StatusCode
+                              , response.Message
+                              , response.BookId
+                              , response.FileCount
+                              , response.AttachCount
+                              , response.CreateMessage
+                              , response.GeneratedCode
+                              , response.ToDate
+                              , response.CodeType
+                              , response.GeneratedDate
+                              , response.GenerateMessage
+                              , response.TransferId
+                              , response.OriginalOrgCode
+                              , response.DestinationOrgCode
+                              , response.TransferStatus
+                              , response.TransferredDate
+                              , response.TransferMessage
+                              , response.WorkflowType
+                              , response.ExecutedBy
+                              , response.WorkflowCompleted
+                              , response.OverallMessage
+                }
+                );
             }
             catch (Exception ex)
             {
@@ -2275,12 +2403,44 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
 
                 _logger.LogInformation($"Step 2 completed: generated_code={generatedCode}, to_date={toDate} (from eSaraban API)");
 
-                // ========== Step 3: Transfer Book ==========
-                _logger.LogInformation("Step 3: Transferring book...");
+                // ========== Step 3: Transfer Book (Call eSaraban API) ==========
+                _logger.LogInformation("Step 3: Transferring book via eSaraban API...");
 
                 string transferId = string.IsNullOrWhiteSpace(tranfer_id) ? Guid.NewGuid().ToString() : tranfer_id;
 
-                _logger.LogInformation($"Step 3 completed: transfer_id={transferId}");
+                // Create transfer request
+                var transferRequest = new TransferBookRequest
+                {
+                    TransferReason = request.transfer_reason ?? "Workflow Transfer",
+                    TransferNote = request.transfer_note
+                };
+
+                var transferApiResponse = await _esarabanApi.TransferBookAsync(
+                    request.user_ad,
+                    bookId,
+                    transferId,
+                    request.original_org_code,
+                    request.destination_org_code,
+                    transferRequest
+                );
+
+                if (transferApiResponse == null)
+                {
+                    _logger.LogError("Failed to call eSaraban TransferBook API");
+                    
+                    var errorResponse = new CreateGenerateTransferResponse
+                    {
+                        Status = "E",
+                        StatusCode = "503",
+                        Message = "Failed to connect to eSaraban API (Transfer Book). Please try again later.",
+                        BookId = bookId,
+                        GeneratedCode = generatedCode,
+                        ToDate = toDate
+                    };
+                    return StatusCode(503, errorResponse);
+                }
+
+                _logger.LogInformation($"Step 3 completed: transfer_id={transferId}, status={transferApiResponse.Status} (from eSaraban API)");
 
                 // ========== Build Response (K2 Compatible) ==========
                 var response = new CreateGenerateTransferResponse
@@ -2320,7 +2480,30 @@ namespace EXAT.ECM.EER.ESARABAN.Controllers
                 _logger.LogInformation($"WorkflowUnderConstruction completed successfully: {response.GeneratedCode}");
 
                 // K2 Compatible: Return direct response without ApiResponse wrapper
-                return Ok(response);
+                return Ok(new { response.Status
+                              , response.StatusCode
+                              , response.Message
+                              , response.BookId
+                              , response.FileCount
+                              , response.AttachCount
+                              , response.CreateMessage
+                              , response.GeneratedCode
+                              , response.ToDate
+                              , response.CodeType
+                              , response.GeneratedDate
+                              , response.GenerateMessage
+                              , response.TransferId
+                              , response.TransferStatus
+                              , response.TransferredDate
+                              , response.OriginalOrgCode
+                              , response.DestinationOrgCode
+                              , response.TransferMessage
+                              , response.WorkflowType
+                              , response.ExecutedBy
+                              , response.WorkflowCompleted
+                              , response.OverallMessage
+                }
+                );
             }
             catch (Exception ex)
             {

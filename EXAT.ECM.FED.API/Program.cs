@@ -26,8 +26,7 @@ builder.Services.AddScoped<IConfigService, ConfigServiceTemplateImportBankFED>()
 // Env var:
 
 builder.Services.AddDbContext<OracleDbContext>(options =>
-    //options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
-    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+    options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
 
 // ---------- CORS ----------
 builder.Services.AddCors(options =>
