@@ -3,7 +3,10 @@ using Aspose.Words.Tables;
 using Aspose.Words;
 using System.Data;
 using System.Reflection;
-
+using System.Drawing;
+using Aspose.Words.Markup;
+using Aspose.Words.Saving;
+using System.Collections.Generic;
 namespace EXAT.ECM.FED.API.Helper
 {
 
@@ -53,7 +56,7 @@ namespace EXAT.ECM.FED.API.Helper
             {
                 foreach (var replaceObj in replaceObjs)
                 {
-                    foreach (string keyname in replaceObj.Keys)
+                    foreach (string keyname in  replaceObj.Keys)
                     {
                         // Key
                         node.Range.Replace("[" + keyname + "]"
@@ -65,6 +68,7 @@ namespace EXAT.ECM.FED.API.Helper
                 }
             }
         }
+        
         public void ReplaceNodeDataRow(Node node, string bookMarkName, List<Dictionary<string, ReplaceObject>> replaceObjs)
         {
             Bookmark bm = node.Range.Bookmarks[bookMarkName];
@@ -98,11 +102,50 @@ namespace EXAT.ECM.FED.API.Helper
                             Row newItemRow = (Row)coppyItemRow.Clone(true);
                             itemTable.Rows.Insert((itemRowIndex + 1), newItemRow);
                             ReplaceNodeText(newItemRow, replaceObjs[i]);
-                            //if (i == 0)
-                            //    itemRow.Remove();
-                        }
+                            foreach (var T_replaceObj in replaceObjs[i])
+                            {
+                                if(T_replaceObj.Key == "HIGHLIGHT_COLOR" )
+                                {
+                                    string colorValue = "";
+
+                                    var val = T_replaceObj.Value?.Value;
+                                    var fmt = T_replaceObj.Value?.Format;
+
+                                    if (val != null)
+                                    {
+                                        colorValue = !string.IsNullOrEmpty(fmt)
+                                            ? string.Format("{0:" + fmt + "}", val)
+                                            : Convert.ToString(val);
+                                    }
+
+                                    // เรียกใช้กับ newItemRow โดยตรง (ไม่ใช่ node หรือ table ทั้ง document)
+                                    ReplaceBackgroundColor(newItemRow, colorValue);
+                                }
+                            }
+                                //if (i == 0)
+                                //    itemRow.Remove();
+                            }
                     }
                 }
+            }
+        }
+        public void ReplaceBackgroundColor(Row row, string colorValue)
+        {
+            if (string.IsNullOrWhiteSpace(colorValue))
+                return;
+
+            try
+            {
+                Color color = ColorTranslator.FromHtml(colorValue);
+
+                foreach (Cell cell in row.Cells)
+                {
+                    cell.CellFormat.Shading.BackgroundPatternColor = color;
+                }
+            }
+            catch
+            {
+                throw;
             }
         }
         public void RemoveRowWithSpecificBookmark(Document doc, string bookmarkName)
@@ -190,7 +233,47 @@ namespace EXAT.ECM.FED.API.Helper
             }
             return result;
         }
+        //First
+        public void SetCheckboxes(Document doc, List<Dictionary<string, ReplaceObject>> headerList)
+        {
+            if (headerList == null || headerList.Count == 0)
+            {
+                Console.WriteLine("⚠ ไม่มีข้อมูลสำหรับ SetCheckboxes");
+                return;
+            }
 
+            // รวม key ทั้งหมด (ในกรณีมีหลาย Dictionary)
+            var mergedHeader = headerList
+                .SelectMany(dict => dict)
+                .GroupBy(x => x.Key)
+                .ToDictionary(g => g.Key, g => g.First().Value);
+
+            foreach (StructuredDocumentTag sdt in doc.GetChildNodes(NodeType.StructuredDocumentTag, true))
+            {
+                if (sdt.SdtType == SdtType.Checkbox)
+                {
+                    string title = sdt.Title?.Trim();
+
+                    if (!string.IsNullOrEmpty(title) && mergedHeader.ContainsKey(title))
+                    {
+                        var replaceObj = mergedHeader[title];
+                        object value = replaceObj?.Value;
+
+                        // ✅ รองรับค่าจาก DataTable (object, bool, string, int)
+                        bool isChecked = false;
+                        if (value != null)
+                        {
+                            string val = value.ToString().Trim().ToLower();
+
+                            isChecked = val == "true" || val == "1" || val == "yes" || val == "y";
+                        }
+
+                        sdt.Checked = isChecked;
+                        Console.WriteLine($"✔ Checkbox '{title}' set to {isChecked}");
+                    }
+                }
+            }
+        }
         private DataTable ToDataTable<T>(T item)
         {
             DateTime _date_start = DateTime.Now;

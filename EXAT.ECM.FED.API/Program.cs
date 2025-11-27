@@ -26,7 +26,8 @@ builder.Services.AddScoped<IConfigService, ConfigServiceTemplateImportBankFED>()
 // Env var:
 
 builder.Services.AddDbContext<OracleDbContext>(options =>
-    options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+    //options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
 
 // ---------- CORS ----------
 builder.Services.AddCors(options =>
@@ -48,7 +49,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
+// ---------- Set Aspose License ----------
+var asposeConfig = builder.Configuration.GetSection("AsposeConfig");
+var licensePath = asposeConfig.GetValue<string>("LicensePath");
+SetAsposeLicense(app.Environment, licensePath);
 // ---------- Middleware pipeline ----------
 if (app.Environment.IsDevelopment())
 {
@@ -67,3 +71,26 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+static void SetAsposeLicense(IWebHostEnvironment env, string licenseRelativePath)
+{
+    try
+    {
+        string licenseFullPath = Path.Combine(env.ContentRootPath, licenseRelativePath.TrimStart('/'));
+        if (!File.Exists(licenseFullPath))
+        {
+            Console.WriteLine($"❌ Aspose License file not found: {licenseFullPath}");
+            return;
+        }
+        var wordLic = new Aspose.Words.License();
+        wordLic.SetLicense(licenseFullPath);
+        var pdfLic = new Aspose.Pdf.License();
+        pdfLic.SetLicense(licenseFullPath);
+        Console.WriteLine("✅ Aspose License set successfully from: " + licenseFullPath);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("❌ Error setting Aspose License: " + ex.Message);
+    }
+}

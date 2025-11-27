@@ -32,7 +32,7 @@ namespace EXAT.ECM.FED.API.Controllers
         private readonly ILoggingService _loggingService;
         private readonly OracleDbContext _oracleContext;
         private readonly IFleetCardRepository _repository;
-
+        
         public EXATFEDController(ILogger<EXATFEDController> logger
                                   , IOptions<AsposeOption> asposeOption
                                   , IWebHostEnvironment environment
@@ -54,7 +54,6 @@ namespace EXAT.ECM.FED.API.Controllers
             _loggingService = loggingService;
             _repository = repository;
             _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
-            //_connectionString = configuration.GetConnectionString("OracleConnection");
         }
         private string VehicleRequestTemplate = "DocumentTemplate/FED/VehicleRequestTemplate.docx"; 
         private string DailyVehiuseTemplate = "DocumentTemplate/FED/FEDDailyVehiUsageTemplate.docx";
@@ -65,6 +64,15 @@ namespace EXAT.ECM.FED.API.Controllers
         private string FEDPoliceFuelExceedTemplate = "DocumentTemplate/FED/FEDPoliceFuelExceedTemplate.docx";
         private string FEDIncomptFuelTaxInvTemplate = "DocumentTemplate/FED/FEDIncomptFuelTaxInvTemplate.docx";
         private string FEDFuelFleetCardTemplate = "DocumentTemplate/FED/FEDFuelFleetCardTemplate.docx";
+        private string FEDFuelFleetCard_Header_Template = "DocumentTemplate/FED/FEDFuelFleetCardTemplate_List.docx"; 
+        private string FEDFuelFleetCard_Detail_Template = "DocumentTemplate/FED/FEDFuelFleetCardTemplate_Detail.docx";
+        private string test = "DocumentTemplate/FED/test.docx";
+        private string VehicleHandoverTemplate = "DocumentTemplate/FED/VehicleHandoverTemplate.docx";
+        private string DailyVehicleInspectionTemplate = "DocumentTemplate/FED/DailyVehicleInspectionTemplate.docx";
+        private string VehicleRepairRequestTemplate = "DocumentTemplate/FED/VehicleRepairRequestTemplate.docx";
+        private string FEDFuelFleetCardBank = "DocumentTemplate/FED/FEDFuelFleetCardBankTemplate.docx";
+
+
         private object stackTrace;
 
         // GET: api/TestConnection
@@ -146,23 +154,34 @@ namespace EXAT.ECM.FED.API.Controllers
                     StatusCode = "200",
                     Data = string.Format("Success"),
                 };
-
+                //p_Parameter = "p_USER_AD%3DEXAT%5CAdministrator";
+                //p_FileName = "FleetCardFuelUsageTemplate.pdf";
+                //p_Template = "FleetCardFuelUsageTemplate";
                 FEDParameterModel request = new FEDParameterModel();
                 #region set parameter
                 string[] splitParam = new string[0];
+                p_Parameter = Uri.UnescapeDataString(p_Parameter);
                 if (!string.IsNullOrEmpty(p_Parameter))
-                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                splitParam = p_Parameter.Split(new Char[] { '|' });
 
                 foreach (string paramItem in splitParam)
                 {
+                    _logger.LogInformation($"paramItem {paramItem} ");
                     string[] paramVal = paramItem.Split('=');
                     if (paramVal != null && paramVal.Length == 2)
                     {
                         switch (paramVal[0])
                         {
                             case "p_HEADER_ID": request.p_HEADER_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_ORG_CODE": request.p_ORG_CODE = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_VEHICLE_ID": request.p_VEHICLE_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_MONTH": request.p_MONTH_NO = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_YEAR": request.p_YEAR = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_DOC_DATE_FROM": request.p_DATE_FROM = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_DOC_DATE_TO": request.p_DATE_TO = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_USER_AD": request.p_USER_AD = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                            case "p_TAX_INVOICE": request.p_TAX_INVOICE = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
                             case "p_DATA": request.p_DATA = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
-                 
                         }
                     }
                 }
@@ -186,7 +205,6 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-
                 if (p_Template == "FEDFuelExpenseReqTemplate") // ใบเบิกจ่ายค่าน้ำมัน
                 {
                     if (string.IsNullOrEmpty(p_FileName))
@@ -209,7 +227,6 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-
                 if (p_Template == "FEDPoliceFuelExceedTemplate") //รายงานรถตำรวจที่ใช้น้ำมันเกินกว่าที่ได้รับสนับสนุนจาก กทพ.
                 {
                     if (string.IsNullOrEmpty(p_FileName))
@@ -233,7 +250,6 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-
                 if (p_Template == "IncomptFuelTaxInvTemplate")
                 {
                     if (string.IsNullOrEmpty(p_FileName))
@@ -256,7 +272,6 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-
                 if (p_Template == "FleetCardFuelUsageTemplate")
                 {
                     if (string.IsNullOrEmpty(p_FileName))
@@ -264,27 +279,164 @@ namespace EXAT.ECM.FED.API.Controllers
                         p_FileName = string.Format("Export_{0}.Docx", "DownloadPrintFormFuelFleetCard");
                     }
                     string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, FEDFuelFleetCardTemplate);
+
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    //AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    // get data from
+                    var mainData = await _fedService.GetLIST_HEADER_REPORTFormAsync(request);
+                    if (mainData == null || mainData.Count == 0)
+                        throw new Exception("No report header data found.");
+
+                    List<byte[]> pdfFiles = new List<byte[]>();
+                    foreach (var header in mainData)
+                    {
+                        var subRequest = new ParameterHEADER_REPORT
+                        {
+                            p_ORG_CODE = header.ORG_CODE,
+                            p_VEHICLE_ID = header.VEHICLE_ID,
+                            p_MONTH_NO = header.MONTH,
+                            p_YEAR = header.YEAR,
+                            p_REQUEST_DOCDATE_FROM = header.DATE_FROM,
+                            p_REQUEST_DOCDATE_TO = header.DATE_TO,
+                            p_HEADER_ID = header.HEADER_ID,
+                            p_CATEGORY_ID = header.CATEGORY_ID
+                        };
+                        var data = _fedService.GetFuelFleetCardFormAsync(subRequest);
+                        var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+                        var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
+                        var d_detail2 = data.Result?.Detail2 == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail2);
+
+                        using (MemoryStream memoryStreamTemp = new MemoryStream())
+                        {
+                            AsposeHelper document_temp = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                            replacWords.ReplaceNodeDataRow(document_temp, "bmDataRow", d_detail);
+                            replacWords.ReplaceNodeDataRow(document_temp, "bmDataRow2", d_detail2);
+                            replacWords.ReplaceNodeText(document_temp, d_header);
+                            replacWords.ReplaceNodeText(document_temp, d_detail);
+                            replacWords.RemoveRowWithSpecificBookmark(document_temp, "bmDataRow");
+                            replacWords.RemoveRowWithSpecificBookmark(document_temp, "bmDataRow2");
+                            document_temp.Save(memoryStreamTemp, p_FileName);
+                            memoryStreamTemp.Position = 0;
+                            var pdfBytes = memoryStreamTemp.ToArray();
+                            pdfFiles.Add(pdfBytes);
+                            _logger.LogInformation("PDF[{Index}] size: {Size} bytes", pdfFiles.Count, pdfBytes.Length);
+                            memoryStreamTemp.Close();
+                        }
+
+                        //
+                    }
+                    //byte[] mergedPdf = document.MergePdfFiles(pdfFiles);
+                    AsposeHelper merger = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    _logger.LogInformation($"Merging {pdfFiles.Count} PDF files...");
+                    bytes = merger.MergePdfFiles(pdfFiles);
+                    _logger.LogInformation($"Merged PDF size: {bytes.Length} bytes");
+                    //var data = _fedService.GetFuelFleetCardFormAsync(request);
+                    //var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+                    //var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
+                    //var d_detail2 = data.Result?.Detail2 == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail2);
+
+                    //replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
+                    //replacWords.ReplaceNodeDataRow(document, "bmDataRow2", d_detail2);
+                    //replacWords.ReplaceNodeText(document, d_header);
+                    //replacWords.ReplaceNodeText(document, d_detail);
+                    //replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
+                    //replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow2");
+                    //document.Save(memoryStream, p_FileName);
+                }
+                if (p_Template == "VehicleRepairRequestTemplate") // บันทึกการส่งมอบรถและอุปกรณ์
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleRepairRequestTemplate");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleRepairRequestTemplate);
                     var apOption = new AsposeHelperOption(_asposeOption, _environment);
                     AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
                     ReplaceWords replacWords = new ReplaceWords();
 
-                    // get data from oracle
-                    var data = _fedService.GetFuelFleetCardFormAsync(request);
+                    //// get data from oracle
+                    var data = _fedService.GetVEHICLEREPAIRREQUESTFormAsync(request);
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
-                    var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
-                    var d_detail2 = data.Result?.Detail2 == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail2);
-                    
-                    replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
-                    replacWords.ReplaceNodeDataRow(document, "bmDataRow2", d_detail2);
+
                     replacWords.ReplaceNodeText(document, d_header);
-                    replacWords.ReplaceNodeText(document, d_detail);
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
-                    replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow2");
+                    // part Checkbox
+                    replacWords.SetCheckboxes(document, d_header);
+
                     document.Save(memoryStream, p_FileName);
                 }
+                if (p_Template == "DailyVehicleInspectionTemplate") //บันทึกการตรวจรถประจำวัน
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "DailyVehicleInspectionTemplate");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, DailyVehicleInspectionTemplate);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
 
+                    //// get data from oracle
+                    var data = _fedService.GetDailyVehicleInspectionFormAsync(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+
+                    replacWords.ReplaceNodeText(document, d_header);
+                  
+                    replacWords.SetCheckboxes(document, d_header);
+
+                    document.Save(memoryStream, p_FileName);
+                }
+                if (p_Template == "VehicleHandoverTemplate") //ใบแจ้งซ่อม / บำรุงรักษารถ
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleHandoverTemplate");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleHandoverTemplate);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    //// get data from oracle
+                    var data = _fedService.GetVEHICLEHANDOVERFormAsync(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+
+                    replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.SetCheckboxes(document, d_header);
+
+                    document.Save(memoryStream, p_FileName);
+                }
+                if (p_Template == "FEDFuelFleetCardBank") // FuelFleetCardBank
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "FEDFuelFleetCardBank");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, FEDFuelFleetCardBank);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    //// get data from oracle
+                    var data = _fedService.GetFuelFleetCardBank(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+                    var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
+
+                    replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
+                    replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
+
+                    document.Save(memoryStream, p_FileName);
+                }
                 if (memoryStream != null)
-                    bytes = memoryStream.ToArray();
+                {
+                    if(p_Template != "FleetCardFuelUsageTemplate")
+                        bytes = memoryStream.ToArray();
+                }
+                    
+                   
 
                 return File(bytes, "application/octet-stream", p_FileName);
             }

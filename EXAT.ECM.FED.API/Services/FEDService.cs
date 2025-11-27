@@ -615,11 +615,13 @@ namespace EXAT.ECM.FED.API.Services
                    .FromSqlRaw(@"
                                     BEGIN 
                                         EFM_FED.SP_7401_GETDATA_POLFUELEXCEED (
+                                            :p_ORG_CODE,
                                             :p_MONTH_NO,
                                             :p_YEAR,
 	                                        :p_DATA
                                         );
                                     END;",
+                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
                     new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
                     new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
                     new OracleParameter("p_DATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
@@ -634,13 +636,23 @@ namespace EXAT.ECM.FED.API.Services
                    .FromSqlRaw(@"
                                     BEGIN 
                                         EFM_FED.SP_7401_GETLIST_POLFUELEXCEED (
-                                            :p_MONTH_NO,
+                                            :p_ORG_CODE,
+                                            :p_VEHICLE_ID,
+                                            :p_MONTH,
                                             :p_YEAR,
+                                            :p_DOC_DATE_FROM,
+                                            :p_DOC_DATE_TO,
+                                            :p_USER_AD,
                                             :p_DATA
                                         );
                                     END;",
-                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
+                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
+                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_MONTH", request.p_MONTH_NO ?? (object)DBNull.Value),
                     new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
+                    new OracleParameter("p_DOC_DATE_FROM", request.p_REQUEST_DOCDATE_FROM ?? (object)DBNull.Value),
+                    new OracleParameter("p_DOC_DATE_TO", request.p_REQUEST_DOCDATE_TO ?? (object)DBNull.Value),
+                    new OracleParameter("p_USER_AD", request.p_USER_AD ?? (object)DBNull.Value),
                     new OracleParameter("p_DATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
                 )
                 .ToListAsync();
@@ -693,12 +705,13 @@ namespace EXAT.ECM.FED.API.Services
         }
         private async Task<List<FED_INCOMPT_FUEL_TAXINV>> GetHeaderIncomptFuelTaxinvFormAsync(FEDParameterModel request)
         {
+            try
+            {
+                var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
 
-            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
-
-            var result = await _oracleContext
-                    .Set<FED_INCOMPT_FUEL_TAXINV>()
-                   .FromSqlRaw(@"
+                var result = await _oracleContext
+                        .Set<FED_INCOMPT_FUEL_TAXINV>()
+                       .FromSqlRaw(@"
                                     BEGIN 
                                         EFM_FED.SP_7402_GETDATA_FUELTAXINCOMPT (
                                             :p_ORG_CODE,
@@ -711,21 +724,29 @@ namespace EXAT.ECM.FED.API.Services
 	                                        :p_DATA
                                         );
                                     END;",
-                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
-                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
-                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
-                    new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
-                    new OracleParameter("p_TAX_INVOICE", request.p_TAX_INVOICE ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_FROM", request.p_DATE_FROM ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
-               )
-                .ToListAsync();
-            return result;
+                        new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
+                        new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
+                        new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
+                        new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
+                        new OracleParameter("p_TAX_INVOICE", request.p_TAX_INVOICE ?? (object)DBNull.Value),
+                        new OracleParameter("p_DATE_FROM", request.p_DATE_FROM ?? (object)DBNull.Value),
+                        new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
+                        new OracleParameter("p_DATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+                   )
+                    .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
         }
         private async Task<List<DETAIL_FED_INCOMPT_FUEL_TAXINV>> GetDetailIncomptFuelTaxinvFormAsync(FEDParameterModel request)
         {
-            var result = await _oracleContext
+            try
+            {
+                var result = await _oracleContext
                     .Set<DETAIL_FED_INCOMPT_FUEL_TAXINV>()
                    .FromSqlRaw(@"
                                     BEGIN 
@@ -750,11 +771,56 @@ namespace EXAT.ECM.FED.API.Services
                     new OracleParameter("p_DATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
                 )
                 .ToListAsync();
-            return result;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
         }
 
         //FUELFLEETCARD REPORT
-        public async Task<FuelFleetCard> GetFuelFleetCardFormAsync(FEDParameterModel request)
+        public async Task<List<Header_Report>> GetLIST_HEADER_REPORTFormAsync(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<Header_Report>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7403_GETLIST_HEADER_REPORT (
+                                            :p_HEADER_ID,
+                                            :p_ORG_CODE,
+                                            :p_VEHICLE_ID,
+                                            :p_MONTH_NO,
+                                            :p_YEAR,
+                                            :p_DATE_FROM,
+                                            :p_DATE_TO,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
+                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
+                    new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
+                    new OracleParameter("p_DATE_FROM", request.p_REQUEST_DOCDATE_FROM ?? (object)DBNull.Value),
+                    new OracleParameter("p_DATE_TO", request.p_REQUEST_DOCDATE_TO ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        public async Task<FuelFleetCard> GetFuelFleetCardFormAsync(ParameterHEADER_REPORT request)
         {
             FuelFleetCard result = new FuelFleetCard();
             try
@@ -781,9 +847,9 @@ namespace EXAT.ECM.FED.API.Services
                 result.Detail2 = detail2;
 
                 // Log หลังจากได้รับข้อมูลจาก Oracle
-                _logger.LogInformation("Received {HeaderData} records from Oracle.", header.Count);
-                _logger.LogInformation("Received {DetailData} records from Oracle.", detail.Count);
-                _logger.LogInformation("Received {DetailData} records from Oracle.", detail2.Count);
+                //_logger.LogInformation("Received {HeaderData} records from Oracle.", header.Count);
+                //_logger.LogInformation("Received {DetailData} records from Oracle.", detail.Count);
+                //_logger.LogInformation("Received {DetailData} records from Oracle.", detail2.Count);
                 return result;
             }
             catch (Exception ex)
@@ -799,12 +865,13 @@ namespace EXAT.ECM.FED.API.Services
                 return null;
             }
         }
-        private async Task<List<FuelFleetCard>> GetHeaderFuelFleetCardFormAsync(FEDParameterModel request)
+        private async Task<List<FuelFleetCard>> GetHeaderFuelFleetCardFormAsync(ParameterHEADER_REPORT request)
         {
 
             var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
-
-            var result = await _oracleContext
+            try
+            {
+                var result = await _oracleContext
                     .Set<FuelFleetCard>()
                    .FromSqlRaw(@"
                                     BEGIN 
@@ -815,25 +882,40 @@ namespace EXAT.ECM.FED.API.Services
                                             :p_YEAR,
                                             :p_DATE_FROM,
                                             :p_DATE_TO,
+                                            :p_HEADER_ID,
+                                            :p_CATEGORY_ID,
 	                                        :p_OUTDATA
                                         );
                                     END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
                     new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
                     new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
                     new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
                     new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_FROM", request.p_DATE_FROM ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
+                    new OracleParameter("p_DATE_FROM", request.p_REQUEST_DOCDATE_FROM ?? (object)DBNull.Value),
+                    new OracleParameter("p_DATE_TO", request.p_REQUEST_DOCDATE_TO ?? (object)DBNull.Value),
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_CATEGORY_ID", request.p_CATEGORY_ID ?? (object)DBNull.Value),
                     new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
                )
                 .ToListAsync();
-            return result;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
         }
-        private async Task<List<DETAIL_FuelFleetCard>> GetDetailFuelFleetCardFormAsync(FEDParameterModel request)
+        private async Task<List<DETAIL_FuelFleetCard>> GetDetailFuelFleetCardFormAsync(ParameterHEADER_REPORT request)
         {
-            var result = await _oracleContext
-                    .Set<DETAIL_FuelFleetCard>()
-                   .FromSqlRaw(@"
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                   .Set<DETAIL_FuelFleetCard>()
+                  .FromSqlRaw(@"
                                     BEGIN 
                                         EFM_FED.SP_7403_GETLIST_FLEETCARD (
                                             :p_ORG_CODE,
@@ -842,23 +924,37 @@ namespace EXAT.ECM.FED.API.Services
                                             :p_YEAR,
                                             :p_DATE_FROM,
                                             :p_DATE_TO,
+                                            :p_HEADER_ID,
+                                            :p_CATEGORY_ID,
 	                                        :p_OUTDATA
                                         );
                                     END;",
-                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
-                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
-                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
-                    new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_FROM", request.p_DATE_FROM ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
-                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
-                )
-                .ToListAsync();
-            return result;
+                   new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                   new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
+                   new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
+                   new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
+                   new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
+                   new OracleParameter("p_DATE_FROM", request.p_REQUEST_DOCDATE_FROM ?? (object)DBNull.Value),
+                   new OracleParameter("p_DATE_TO", request.p_REQUEST_DOCDATE_TO ?? (object)DBNull.Value),
+                   new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                   new OracleParameter("p_CATEGORY_ID", request.p_CATEGORY_ID ?? (object)DBNull.Value),
+                   new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+               .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
         }
-        private async Task<List<DETAIL2_FuelFleetCard>> GetDetail2FuelFleetCardFormAsync(FEDParameterModel request)
+        private async Task<List<DETAIL2_FuelFleetCard>> GetDetail2FuelFleetCardFormAsync(ParameterHEADER_REPORT request)
         {
-            var result = await _oracleContext
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
                     .Set<DETAIL2_FuelFleetCard>()
                    .FromSqlRaw(@"
                                     BEGIN 
@@ -867,23 +963,272 @@ namespace EXAT.ECM.FED.API.Services
                                             :p_VEHICLE_ID,
                                             :p_MONTH_NO,
                                             :p_YEAR,
-                                            :p_TAX_INVOICE,
+                                            :p_DATE_FROM,
+                                            :p_DATE_TO,
+                                            :p_HEADER_ID,
+                                            :p_CATEGORY_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
+                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
+                    new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
+                    new OracleParameter("p_DATE_FROM", request.p_REQUEST_DOCDATE_FROM ?? (object)DBNull.Value),
+                    new OracleParameter("p_DATE_TO", request.p_REQUEST_DOCDATE_TO ?? (object)DBNull.Value),
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_CATEGORY_ID", request.p_CATEGORY_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+                )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+
+        // FuelFleetCardBank
+        public async Task<FED_Header_FUEL_FLEET_CARD_BANK> GetFuelFleetCardBank (FEDParameterModel request)
+        {
+            FED_Header_FUEL_FLEET_CARD_BANK result = new FED_Header_FUEL_FLEET_CARD_BANK();
+            try
+            {
+                _logger.LogInformation("Starting GetFuelFleetCardFormAsync ");
+                SuccessResponse<FuelFleetCard> response = new SuccessResponse<FuelFleetCard>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+                _logger.LogInformation("Calling Oracle ");
+                var detail = await GetDetailFuelFleetCardBank(request);
+                var first = detail.FirstOrDefault();
+                result = new FED_Header_FUEL_FLEET_CARD_BANK
+                {
+                    TOTAL_EXCL_VAT_AMT = first.TOTAL_EXCL_VAT_AMT,
+                    TOTAL_VAT_AMT = first.TOTAL_VAT_AMT,
+                    GRAND_TOTAL_AMT = first.GRAND_TOTAL_AMT,
+                    TOTAL_VOLUME_LITERS = first.TOTAL_VOLUME_LITERS,
+                    TOTAL_PRICE_PER_LITER = first.TOTAL_PRICE_PER_LITER,
+                    Detail = detail
+                };
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                //throw new ErrorResponse
+                //{
+                //    Status = "E",
+                //    StatusCode = "500",
+                //    Message = "An error occurred while processing your request."
+                //};
+                return null;
+            }
+        }
+        public async Task<List<FED_DETAIL_FUEL_FLEET_CARD_BANK>> GetDetailFuelFleetCardBank(FEDParameterModel request)
+        {
+            try
+            {
+                var result = await _oracleContext
+                   .Set<FED_DETAIL_FUEL_FLEET_CARD_BANK>()
+                  .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7406_GETLIST_FLEETCARD_BANK (
+                                            :p_ORG_CODE,
+                                            :p_VEHICLE_ID,
+                                            :p_MONTH_NO,
+                                            :p_YEAR,
                                             :p_DATE_FROM,
                                             :p_DATE_TO,
 	                                        :p_OUTDATA
                                         );
                                     END;",
-                    new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
-                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
-                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
-                    new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
-                    new OracleParameter("p_TAX_INVOICE", request.p_TAX_INVOICE ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_FROM", request.p_DATE_FROM ?? (object)DBNull.Value),
-                    new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
+                   new OracleParameter("p_ORG_CODE", request.p_ORG_CODE?? (object)DBNull.Value),
+                   new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID?? (object)DBNull.Value),
+                   new OracleParameter("p_MONTH_NO", request.p_MONTH_NO?? (object)DBNull.Value),
+                   new OracleParameter("p_YEAR", request.p_YEAR?? (object)DBNull.Value),
+                   new OracleParameter("p_DATE_FROM", request.p_DATE_FROM?? (object)DBNull.Value),
+                   new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
+                   new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+               .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+
+        //VEHICLEHANDOVER
+        public async Task<FED_HEADER_VEHICLEHANDOVER> GetVEHICLEHANDOVERFormAsync(FEDParameterModel request)
+        {
+            FED_HEADER_VEHICLEHANDOVER result = new FED_HEADER_VEHICLEHANDOVER();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVEHICLEHANDOVERFormAsync ");
+                SuccessResponse<FED_HEADER_VEHICLEHANDOVER> response = new SuccessResponse<FED_HEADER_VEHICLEHANDOVER>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                // Log ก่อนเรียกข้อมูลจาก Oracle
+                _logger.LogInformation("Calling Oracle ");
+                // เรียกข้อมูลจาก Oracle
+                var header = await GetHeaderVEHICLEHANDOVERFormAsync(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_VEHICLEHANDOVER>> GetHeaderVEHICLEHANDOVERFormAsync(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_VEHICLEHANDOVER>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7109_GETDATA_HANDOVER_TOOLS (
+                                            :P_HEADER_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
                     new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
-                )
+               )
                 .ToListAsync();
-            return result;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        //VEHICLEREPAIRREQUEST
+        public async Task<FED_HEADER_VEHICLEREPAIRREQUEST> GetVEHICLEREPAIRREQUESTFormAsync(FEDParameterModel request)
+        {
+            FED_HEADER_VEHICLEREPAIRREQUEST result = new FED_HEADER_VEHICLEREPAIRREQUEST();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVEHICLEHANDOVERFormAsync ");
+                SuccessResponse<FED_HEADER_VEHICLEREPAIRREQUEST> response = new SuccessResponse<FED_HEADER_VEHICLEREPAIRREQUEST>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                // Log ก่อนเรียกข้อมูลจาก Oracle
+                _logger.LogInformation("Calling Oracle ");
+                // เรียกข้อมูลจาก Oracle
+                var header = await GetHeaderVEHICLEREPAIRREQUESTFormAsync(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_VEHICLEREPAIRREQUEST>> GetHeaderVEHICLEREPAIRREQUESTFormAsync(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_VEHICLEREPAIRREQUEST>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7201_GETDATA_REPAIRE_ITEM (
+                                            :P_HEADER_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        // DailyVehicleInspection
+        public async Task<FED_HEADER_INSPT_EQUIPMNT> GetDailyVehicleInspectionFormAsync(FEDParameterModel request)
+        {
+            FED_HEADER_INSPT_EQUIPMNT result = new FED_HEADER_INSPT_EQUIPMNT();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVEHICLEHANDOVERFormAsync ");
+                SuccessResponse<FED_HEADER_INSPT_EQUIPMNT> response = new SuccessResponse<FED_HEADER_INSPT_EQUIPMNT>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                // Log ก่อนเรียกข้อมูลจาก Oracle
+                _logger.LogInformation("Calling Oracle ");
+                // เรียกข้อมูลจาก Oracle
+                var header = await GetHeaderDailyVehicleInspectionFormAsync(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_INSPT_EQUIPMNT>> GetHeaderDailyVehicleInspectionFormAsync(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_INSPT_EQUIPMNT>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7106_GETDATA_INSPT_EQUIPMNT (
+                                            :P_HEADER_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
         }
 
         //Import Feed card

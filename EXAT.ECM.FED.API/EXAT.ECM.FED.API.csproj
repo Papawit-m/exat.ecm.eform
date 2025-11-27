@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <!-- VS Container tooling (คงเวอร์ชันล่าสุดตัวเดียว) -->
+    <PackageReference Include="Aspose.PDF" Version="24.12.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
 
     <!-- Swagger -->
