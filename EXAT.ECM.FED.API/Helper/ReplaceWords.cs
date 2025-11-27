@@ -4,13 +4,10 @@ using Aspose.Words;
 using System.Data;
 using System.Reflection;
 using System.Drawing;
-<<<<<<< HEAD
 using Aspose.Words.Markup;
 using Aspose.Words.Saving;
 using System.Collections.Generic;
-=======
 
->>>>>>> 9144d2c8939ff0a00fd4c47d76390e815204a648
 namespace EXAT.ECM.FED.API.Helper
 {
 
@@ -237,7 +234,6 @@ namespace EXAT.ECM.FED.API.Helper
             }
             return result;
         }
-<<<<<<< HEAD
         //First
         public void SetCheckboxes(Document doc, List<Dictionary<string, ReplaceObject>> headerList)
         {
@@ -279,8 +275,6 @@ namespace EXAT.ECM.FED.API.Helper
                 }
             }
         }
-=======
->>>>>>> 9144d2c8939ff0a00fd4c47d76390e815204a648
         private DataTable ToDataTable<T>(T item)
         {
             DateTime _date_start = DateTime.Now;
