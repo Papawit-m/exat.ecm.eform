@@ -268,7 +268,7 @@ namespace EXAT.ECM.FED.API.Helper
                 TaxAddress = rowData.GetValueOrDefault("TaxAddress"),
                 BranchNumber = rowData.GetValueOrDefault("BranchNumber"),
                 InvoiceNo = rowData.GetValueOrDefault("InvoiceNo"),
-                ProductName = rowData.GetValueOrDefault("ProductName"),
+                ProductName = rowData.GetValueOrDefault("Product"),
                 Status = "COMPLETED",
                 HeaderId = headerId,
                 ReportFromDate = headerInfo.ReportFromDate,

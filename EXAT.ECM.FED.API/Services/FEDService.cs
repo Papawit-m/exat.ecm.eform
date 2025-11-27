@@ -1044,6 +1044,8 @@ namespace EXAT.ECM.FED.API.Services
                                             :p_YEAR,
                                             :p_DATE_FROM,
                                             :p_DATE_TO,
+                                            :p_HEADER_ID,
+                                            :p_CATEGORY_ID,
 	                                        :p_OUTDATA
                                         );
                                     END;",

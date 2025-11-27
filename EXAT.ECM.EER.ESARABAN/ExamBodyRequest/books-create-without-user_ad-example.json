@@ -1,0 +1,56 @@
+{
+  "book": {
+    "book_owner": "นาย ทดสอบ ระบบ - No user_ad (Use Default)",
+    "book_subject": "ตัวอย่าง Full Format API - ไม่ระบุ user_ad",
+    "book_to": "สำนักงานผู้อำนวยการใหญ่",
+    "book_originaldocumentdetail": "รายละเอียดเอกสารต้นฉบับ - ใช้ default user_ad",
+    "book_searchterm": "คำค้นหา, default, user_ad",
+    "book_remark": "หมายเหตุ: ไม่ระบุ user_ad ในคำขอ ระบบจะใช้ค่า default EXAT\\ECMUSR07",
+    "registrationbook_id": "E1786792382247A49DD27072718DB187",
+    "registrationbook_nameth": "สมุดทะเบียนส่ง",
+    "registrationbook_nameen": "Outgoing Document Register",
+    "registrationbook_ogr_id": "AB5C943827A4445286C3A0BC8D10CF82",
+    "registrationbook_org_code": "AG0101",
+    "registrationbook_org_nameth": "แผนกบริหารงานกลาง",
+    "registrationbook_org_nameen": "Central Administration Section",
+    "registrationbook_org_shtname": "บร.",
+    "booktype_id": 93,
+    "sendtype_id": 1,
+    "format_id": 2,
+    "subformat_id": 0,
+    "speed_id": 1,
+    "secret_id": 1,
+    "optiondate_id": 1,
+    "optionlanguage_id": 1,
+    "optionno_id": 1,
+    "status_id": 1,
+    "request_org_code": "AG0101",
+    "create_page": 1,
+    "is_circular": 0
+  },
+  "bookFile": [
+    {
+      "file_name": "เอกสารทดสอบ.pdf",
+      "file_extension": "pdf",
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_path": "/documents/books",
+      "file_remark": "ไฟล์เอกสารหลัก - ทดสอบ default user_ad"
+    }
+  ],
+  "bookAttach": [
+    {
+      "file_name": "เอกสารแนบ.pdf",
+      "file_extension": "pdf",
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_path": "/documents/attachments",
+      "file_remark": "เอกสารแนบ"
+    }
+  ],
+  "bookHistory": [
+    {
+      "action": "CREATE",
+      "action_by": "System",
+      "remark": "ทดสอบ default user_ad - สร้างผ่าน API"
+    }
+  ]
+}

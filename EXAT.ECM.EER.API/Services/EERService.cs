@@ -180,7 +180,8 @@ namespace EXAT.ECM.EER.API.Services
                    .FromSqlRaw(@"
                                     BEGIN 
                                         EFM_EER.SP_7002_GETDATA_REQFORM_RPT (
-                                            :p_HEADER_ID,
+                                            :p_REQUEST_ID,
+                                            :p_ITEM_ID,
 	                                        :p_OUTPUT
                                         );
                                     END;",

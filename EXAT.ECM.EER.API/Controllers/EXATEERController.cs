@@ -198,6 +198,9 @@ namespace EXAT.ECM.EER.API.Controllers
                             document.Save(memoryStream, p_FileName);
                             var bytes = memoryStream.ToArray();
 
+                            //const string docxMime2 = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                            //return File(bytes, docxMime2, p_FileName);
+
                             // อัพโหลดเข้า DB ตามรูปแบบ <file>...</file>
                             var base64 = Convert.ToBase64String(bytes);
                             var payload = $"<file><name>{p_FileName}</name><content>{base64}</content></file>";

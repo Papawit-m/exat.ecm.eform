@@ -1,0 +1,107 @@
+{
+  "BookDefaultSettings": {
+    "UserAd": "EXAT\\ECMUSR07",
+    "BookData": {
+      "BookOwner": "",
+      "BookSubject": "เปิดสิทธิทางเข้า-ออก",
+      "BookTo": "สผว.",
+      "BookOriginalDocumentDetail": "",
+      "BookSearchTerm": "เปิดสิทธิทางเข้าออก",
+      "BookRemark": "",
+      "RegistrationBookId": "012256814234000000000000000000000000",
+      "RegistrationBookNameTh": "สมุดทะเบียนส่ง",
+      "RegistrationBookNameEn": "",
+      "RegistrationBookOgrId": "3A76E09AFF614D139AFB2D551BFFB99F",
+      "RegistrationBookOrgId": "J10100",
+      "RegistrationBookOrgCode": "J10100",
+      "RegistrationBookOrgNameEn": "Land Acquisition Division",
+      "RegistrationBookOrgShtName": "กกท.",
+      "BookTypeId": 93,
+      "SendTypeId": 1,
+      "FormatId": 2,
+      "SubFormatId": 0,
+      "SpeedId": 1,
+      "SecretId": 1,
+      "OptionDateId": 1,
+      "OptionLanguageId": 1,
+      "OptionNoId": 1,
+      "StatusId": 1,
+      "RequestOrgCode": "AG0101",
+      "CreatePage": 1,
+      "IsCircular": 0,
+      "LawId": null,
+      "LawCode": null,
+      "ParentPositionCode": null
+    },
+    "BookFile": {
+      "FileExtension": ".pdf",
+      "FilePath": "/documents/books",
+      "FileUrl": null,
+      "AlfrescoParentId": null,
+      "AlfrescoFolderName": "Books",
+      "AlfrescoNodeType": "cm:content",
+      "SupportMultipleFiles": true,
+      "MaxFilesCount": 10
+    },
+    "BookAttachment": {
+      "FileExtension": ".pdf",
+      "FilePath": "/documents/attachments",
+      "FileUrl": null,
+      "AlfrescoParentId": null,
+      "AlfrescoFolderName": "Attachments",
+      "AlfrescoNodeType": "cm:content",
+      "SupportMultipleFiles": true,
+      "MaxFilesCount": 20
+    },
+    "BookHistory": {
+      "Action": "CREATE",
+      "ActionBy": null,
+      "Remark": "สร้างเอกสารผ่าน K2 REST API"
+    },
+    "Transfer": {
+      "DefaultOriginalOrgCode": "J10100",
+      "DefaultDestinationOrgCode": "J10000"
+    },
+    "Endpoints": {
+      "Original": {
+        "BookCodePrefix": "BK-",
+        "StatusId": 1,
+        "HistoryAction": "CREATE_ORIGINAL",
+        "Description": "สร้างเอกสารทั่วไป (General Purpose)",
+        "CustomDefaults": {
+          "create_page": 1
+        }
+      },
+      "Approved": {
+        "BookCodePrefix": "APV-",
+        "StatusId": 2,
+        "HistoryAction": "CREATE_APPROVED",
+        "Description": "สร้างเอกสารกรณีอนุมัติ/เข้าสู่หลักเกณ์",
+        "CustomDefaults": {
+          "create_page": 2,
+          "status_note": "อนุมัติและเข้าสู่หลักเกณ์แล้ว"
+        }
+      },
+      "NonCompliant": {
+        "BookCodePrefix": "NCL-",
+        "StatusId": 3,
+        "HistoryAction": "CREATE_NON_COMPLIANT",
+        "Description": "สร้างเอกสารกรณีไม่เข้าหลักเกณ์",
+        "CustomDefaults": {
+          "create_page": 3,
+          "status_note": "ไม่เข้าหลักเกณ์"
+        }
+      },
+      "UnderConstruction": {
+        "BookCodePrefix": "UNC-",
+        "StatusId": 4,
+        "HistoryAction": "CREATE_UNDER_CONSTRUCTION",
+        "Description": "สร้างเอกสารกรณีอยู่ระหว่างก่อสร้าง",
+        "CustomDefaults": {
+          "create_page": 4,
+          "status_note": "อยู่ระหว่างก่อสร้าง"
+        }
+      }
+    }
+  }
+}
