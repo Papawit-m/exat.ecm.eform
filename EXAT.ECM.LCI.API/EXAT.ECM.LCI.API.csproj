@@ -1,0 +1,77 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- สำหรับ dev secrets -->
+    <UserSecretsId>6ca4f58a-d3a7-4aa4-b6d2-529f73eee4d9</UserSecretsId>
+
+    <!-- บอกว่า target runtime คือ Linux x64 เพื่อดึง native assets (.so) -->
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
+
+    <!-- VS docker tooling -->
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+  </PropertyGroup>
+
+  <!-- ลบการ exclude โฟลเดอร์ DocumentTemplate/Models ออก (เรา copy ผ่าน Dockerfile อยู่แล้วก็ได้)
+       ถ้าต้องการ exclude ต่อ ให้คงบล็อกนี้ไว้ตามเดิม -->
+  <ItemGroup>
+    <Compile Remove="DocumentTemplate\**" />
+    <Compile Remove="Models\**" />
+    <Content Remove="DocumentTemplate\**" />
+    <Content Remove="Models\**" />
+    <EmbeddedResource Remove="DocumentTemplate\**" />
+    <EmbeddedResource Remove="Models\**" />
+    <None Remove="DocumentTemplate\**" />
+    <None Remove="Models\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Models\APIModel\RequestModel.cs" />
+    <Compile Include="Models\APIModel\ResponseModel.cs" />
+    <Compile Include="Models\LCIParameterModel.cs" />
+    <Compile Include="Models\LCI_HEADER_REQUEST_REPORT.cs" />
+    <Compile Include="Models\LCI_HEADER_SUMMARY_REPORT.cs" />
+    <Compile Include="Models\Utilities.cs" />
+  </ItemGroup>
+
+  <!-- ล้างแพ็กเกจซ้ำ/ล้าสมัย และเพิ่ม SkiaSharp + NativeAssets -->
+  <ItemGroup>
+    <!-- Core packages -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="Oracle.EntityFrameworkCore" Version="7.21.13" />
+    <PackageReference Include="EPPlus" Version="8.0.2" />
+    <PackageReference Include="Aspose.Words" Version="25.1.0" />
+
+    <!-- SkiaSharp สำหรับ Linux (Debian/glibc) -->
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+
+    <!-- VS Container tooling (ครั้งเดียวพอ) -->
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
+  </ItemGroup>
+
+  <!-- ไม่จำเป็นบน .NET 8: เอาออก Microsoft.NETCore.Platforms/Targets 1.1.0 -->
+  <!-- <PackageReference Include="Microsoft.NETCore.Platforms" Version="1.1.0" /> -->
+  <!-- <PackageReference Include="Microsoft.NETCore.Targets" Version="1.1.0" /> -->
+
+  <ItemGroup>
+    <None Update="LicenseAspose\AsposeLCI.Total.NET.lic">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

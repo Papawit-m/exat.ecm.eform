@@ -1,0 +1,23 @@
+﻿{
+    "success":  true,
+    "message":  "เอกสารถูกสร้างสำเร็จ",
+    "data":  {
+                 "status":  "S",
+                 "statusCode":  "200",
+                 "message":  "Success: generate book.",
+                 "book_id":  "DF4E19B272DE4FD78880B4CE65CECD75",
+                 "book_code":  "APV-20251030-5810",
+                 "book_subject":  "ทดสอบภาษาไทยใน Response",
+                 "book_to":  "ผอำนวยการใหญ",
+                 "registrationbook_id":  "E1786792382247A49DD27072718DB187",
+                 "parent_bookid":  "",
+                 "parent_orgid":  "",
+                 "parent_positionname":  "",
+                 "booktype_id":  93,
+                 "created_by":  "EXAT\\ECMUSR07",
+                 "created_date":  "2025-10-30T20:06:30.5011076+07:00"
+             },
+    "error":  null,
+    "errorCode":  null,
+    "timestamp":  "2025-10-30T13:06:30.5011105Z"
+}

@@ -1,0 +1,6 @@
+@EXAT.ECM.PRS.API_HostAddress = http://localhost:5073
+
+GET {{EXAT.ECM.PRS.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

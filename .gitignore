@@ -1,0 +1,48 @@
+
+# Ignore Visual Studio temporary files, build results, and
+# user-specific files
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Build results
+bin/
+obj/
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Visual Studio
+.vs/
+.vscode/
+*.dbmdl
+*.bak
+
+## Others
+*.log
+*.tmp
+*.swp
+*.orig
+
+# Rider
+.idea/
+/EXAT.ECM.EER.API/Dockerfile-uat
+/EXAT.ECM.EER.API/Dockerfile-cds
+/EXAT.ECM.EON.API/Dockerfile-cds
+/EXAT.ECM.EON.API/Dockerfile-uat
+/EXAT.ECM.FED.API/Dockerfile-cds
+/EXAT.ECM.FED.API/Dockerfile-uat
+/EXAT.ECM.K2.API/Dockerfile-cds
+/EXAT.ECM.K2.API/Dockerfile-uat
+/EXAT.ECM.LCI.API/Dockerfile-cds
+/EXAT.ECM.LCI.API/Dockerfile-uat
+/EXAT.ECM.PPA.API/Dockerfile-cds
+/EXAT.ECM.PPA.API/Dockerfile-uat
+/EXAT.ECM.PRS.API/Dockerfile-cds
+/EXAT.ECM.PRS.API/Dockerfile-uat

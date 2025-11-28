@@ -1,0 +1,32 @@
+{
+  "user_ad": "EXAT\\ECMUSR07",
+  "book_subject": "เปิดสิทธิทางเข้า-ออก",
+  "book_to": "สผว.",
+  "registrationbook_id": "012256814234000000000000000000000000",
+  "registrationbook_nameth": "สมุดทะเบียนส่ง",
+  "registrationbook_nameen": "",
+  "registrationbook_ogr_id": "3A76E09AFF614D139AFB2D551BFFB99F",
+  "registrationbook_org_code": "J10100",
+  "registrationbook_org_nameth": "กองกรรมสิทธิ์ที่ดิน",
+  "registrationbook_org_nameen": "Land Acquisition Division",
+  "registrationbook_org_shtname": "กกท.",
+  "parent_bookid": "",
+  "parent_orgid": "",
+  "parent_orgcode": "AG01",
+  "parent_positioncode": "POS001",
+  "parent_positionname": "",
+  "bookAttach": [
+    {
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_name": "เอกสารแนบ1.pdf",
+      "file_extension": "pdf"
+    }
+  ],
+  "bookFile": [
+    {
+      "file_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1szIDAgUl0+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXT4+CmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA0L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMTkzCiUlRU9GCg==",
+      "file_name": "เอกสารหลัก.pdf",
+      "file_extension": "pdf"
+    }
+  ]
+}

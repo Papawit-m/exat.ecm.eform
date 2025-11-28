@@ -1,0 +1,6 @@
+@EXAT.ECM.EON.API_HostAddress = http://localhost:5157
+
+GET {{EXAT.ECM.EON.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

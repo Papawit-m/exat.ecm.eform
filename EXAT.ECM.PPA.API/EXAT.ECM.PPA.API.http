@@ -1,0 +1,6 @@
+@EXAT.ECM.PPA.API_HostAddress = http://localhost:5229
+
+GET {{EXAT.ECM.PPA.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
