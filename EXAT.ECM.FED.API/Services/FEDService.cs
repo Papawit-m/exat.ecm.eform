@@ -1,6 +1,7 @@
 ﻿using EXAT.ECM.FED.API.DAL;
 using EXAT.ECM.FED.API.Models;
 using EXAT.ECM.FED.API.Services.Interfaces;
+using EXAT.ECM.FED.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Oracle.ManagedDataAccess.Client;
@@ -19,6 +20,7 @@ using EXAT.ECM.FED.API.Helper;
 using static EXAT.ECM.FED.API.Models.Utilities;
 using System.Globalization;
 using System.Threading;
+using System.Text;
 
 
 
@@ -34,8 +36,15 @@ namespace EXAT.ECM.FED.API.Services
         private readonly ILoggingService _loggingService; 
         private readonly IFleetCardRepository _repository;
 
+        
 
-        public FEDService(OracleDbContext oracleContext, IConfiguration configuration, ILogger<FEDService> logger, IConfigService configService,IFleetCardRepository repository, ILoggingService loggingService)
+        public FEDService(
+            OracleDbContext oracleContext, 
+            IConfiguration configuration, 
+            ILogger<FEDService> logger, 
+            IConfigService configService,
+            IFleetCardRepository repository, 
+            ILoggingService loggingService)
         {
             _oracleContext = oracleContext;
             _configuration = configuration;
@@ -1268,7 +1277,7 @@ namespace EXAT.ECM.FED.API.Services
                 var FileExcelList = await GetFileFromDatabase(request);
                 var FileExcel = FileExcelList?.FirstOrDefault();
                 
-                if (FileExcel == null || string.IsNullOrEmpty(FileExcel.FILE_CONTENT))
+                if (FileExcel == null || string.IsNullOrEmpty(FileExcel.CONTENT_VALUE))
                 {
                     CheckFileExcel = "Step 2. Check FileExcel : ไม่พบไฟล์ที่เกี่ยวข้อง";
 
@@ -1278,12 +1287,12 @@ namespace EXAT.ECM.FED.API.Services
                     return result;
                 }
 
-                if(FileExcel != null && !string.IsNullOrEmpty(FileExcel.FILE_CONTENT))
+                if(FileExcel != null && !string.IsNullOrEmpty(FileExcel.CONTENT_VALUE))
                 {
                     // Step 2: Decode + read to DataTable
 
-                    var tbl = ReadExcelBase64(FileExcel.FILE_CONTENT);
-                    if (tbl.Rows.Count == 0 || string.IsNullOrEmpty(FileExcel.FILE_CONTENT))
+                    var tbl = ReadExcelBase64(FileExcel.CONTENT_VALUE);
+                    if (tbl.Rows.Count == 0 || string.IsNullOrEmpty(FileExcel.CONTENT_VALUE))
                     {
                         CheckFileExcel = "Step 3. Check Data File Excel : ไม่พบข้อมูลในไฟล์ Excel";
 
