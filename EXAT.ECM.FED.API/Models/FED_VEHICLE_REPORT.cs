@@ -203,26 +203,26 @@ namespace EXAT.ECM.FED.API.Models
         public string? VEHICLE_MODEL { get; set; }
         public string? VEHICLE_TYPE_NAME_TH { get; set; }
         public string? VEHICLE_COLOR { get; set; }
-        public string? FLAG_PUBLIC_VEH { get; set; }
-        public string? FLAG_PASSENGER_VEH { get; set; }
-        public string? FLAG_COMPANY_VEH { get; set; }
+        public string? FLAG_PUBLIC_VEH_HTML { get; set; }
+        public string? FLAG_PASSENGER_VEH_HTML { get; set; }
+        public string? FLAG_COMPANY_VEH_HTML { get; set; }
         public string? REQUEST_SEC_CODE { get; set; }
         public string? REQUEST_DIV_NAME { get; set; }
-        public string? FLAG_VEHICLE_MANUAL_ANTIRUST { get; set; }
+        public string? FLAG_VEH_MANUAL_ANT_HTML { get; set; }
         public string? VEHICLE_MANUAL_ANTIRUST { get; set; }
-        public string? FLAG_ACK_WITH_HANDLE_QTY { get; set; }
+        public string? FLAG_ACK_HANDLE_QTY_HTML { get; set; }
         public string? ACK_WITH_HANDLE_QTY { get; set; }
-        public string? FLAG_SPARE_TIRE_SIZE_INCH { get; set; }
+        public string? FLAG_SPARE_TIRE_INCH_HTML { get; set; }
         public string? SPARE_TIRE_SIZE_INCH { get; set; }
-        public string? FLAG_RUBBER_MAT_AVAILABLE { get; set; }
+        public string? FLAG_RUBBER_MAT_HTML { get; set; }
         public string? RUBBER_MAT_AVAILABLE { get; set; }
-        public string? FLAG_WHEEL_COVER_AVAILABLE { get; set; }
+        public string? FLAG_WHEEL_COVER_HTML { get; set; }
         public string? WHEEL_COVER_AVAILABLE { get; set; }
-        public string? FLAG_CLUTCH_LOCK_BRAND { get; set; }
+        public string? FLAG_CLUTCH_LOCK_HTML { get; set; }
         public string? CLUTCH_LOCK_BRAND { get; set; }
-        public string? FLAG_RADIO_BRAND { get; set; }
+        public string? FLAG_RADIO_BRAND_HTML { get; set; }
         public string? RADIO_BRAND { get; set; }
-        public string? FLAG_AIR_CONDITIONER_BRAND { get; set; }
+        public string? FLAG_AIR_COND_BRAND_HTML { get; set; }
         public string? AIR_CONDITIONER_BRAND { get; set; }
         public string? OTHER_REMARK { get; set; }
         public string? TOOL_SPARK_PLUG_WRENCH_QTY { get; set; }
@@ -252,10 +252,10 @@ namespace EXAT.ECM.FED.API.Models
     public class FED_HEADER_VEHICLEREPAIRREQUEST
     {
         public string? VEHICLE_LICENSE_PLATE { get; set; }
-        public string? USAGE_TYPE_1 { get; set; }
-        public string? USAGE_TYPE_2 { get; set; }
-        public string? USAGE_TYPE_3 { get; set; }
-        public string? USAGE_TYPE_4 { get; set; }
+        public string? USAGE_TYPE_1_HTML { get; set; }
+        public string? USAGE_TYPE_2_HTML { get; set; }
+        public string? USAGE_TYPE_3_HTML { get; set; }
+        public string? USAGE_TYPE_4_HTML { get; set; }
         public string? VEHICLE_NAME_TH { get; set; }
         public string? VEHICLE_TYPE_NAME_TH { get; set; }
         public string? FISCAL_YEAR { get; set; }
@@ -274,47 +274,47 @@ namespace EXAT.ECM.FED.API.Models
         public string? VEHICLE_TYPE_NAME_TH { get; set; }
         public string? VEHICLE_COLOR { get; set; }
         public string? USAGE_TYPE_NAME_TH { get; set; }
-        public string? FLAG_PUBLIC_VEH { get; set; }
-        public string? FLAG_PASSENGER_VEH { get; set; }
-        public string? FLAG_COMPANY_VEH { get; set; }
+        public string? FLAG_PUBLIC_VEH_HTML { get; set; }
+        public string? FLAG_PASSENGER_VEH_HTML { get; set; }
+        public string? FLAG_COMPANY_VEH_HTML { get; set; }
         public string? REQUEST_SEC_NAME { get; set; }
         public string? REQUEST_DIV_NAME { get; set; }
-        public string? FLAG_FULL_FUEL { get; set; }
-        public string? FLAG_75_FUEL { get; set; }
-        public string? FLAG_50_FUEL { get; set; }
-        public string? FLAG_25_FUEL { get; set; }
-        public string? FLAG_EMPTY_FUEL { get; set; }
-        public string? FLAG_WATER_STATUS_1 { get; set; }
-        public string? FLAG_WATER_STATUS_2 { get; set; }
-        public string? FLAG_DISTILLED_WATER_STATUS_1 { get; set; }
-        public string? FLAG_DISTILLED_WATER_STATUS_2 { get; set; }
-        public string? FLAG_LUBRICANT_OIL_STATUS_1 { get; set; }
-        public string? FLAG_LUBRICANT_OIL_STATUS_2 { get; set; }
-        public string? FLAG_BRAKE_OIL_STATUS_1 { get; set; }
-        public string? FLAG_BRAKE_OIL_STATUS_2 { get; set; }
-        public string? FLAG_CLUTCH_OIL_STATUS_1 { get; set; }
-        public string? FLAG_CLUTCH_OIL_STATUS_2 { get; set; }
+        public string? FLAG_FULL_FUEL_HTML { get; set; }
+        public string? FLAG_75_FUEL_HTML { get; set; }
+        public string? FLAG_50_FUEL_HTML { get; set; }
+        public string? FLAG_25_FUEL_HTML { get; set; }
+        public string? FLAG_EMPTY_FUEL_HTML { get; set; }
+        public string? FLAG_WATER_STS1_HTML { get; set; }
+        public string? FLAG_WATER_STS2_HTML { get; set; }
+        public string? FLAG_DIST_WATER_STS1_HTML { get; set; }
+        public string? FLAG_DIST_WATER_STS2_HTML { get; set; }
+        public string? FLAG_LUB_OIL_STS1_HTML { get; set; }
+        public string? FLAG_LUB_OIL_STS2_HTML { get; set; }
+        public string? FLAG_BRAKE_OIL_STS1_HTML { get; set; }
+        public string? FLAG_BRAKE_OIL_STS2_HTML { get; set; }
+        public string? FLAG_CLUTCH_OIL_STS1_HTML { get; set; }
+        public string? FLAG_CLUTCH_OIL_STS2_HTML { get; set; }
         public string? OTHER_REMARK { get; set; }
-        public string? FLAG_BODY_STATUS_1 { get; set; }
-        public string? FLAG_BODY_STATUS_2 { get; set; }
-        public string? FLAG_LIGHT_STATUS_1 { get; set; }
-        public string? FLAG_LIGHT_STATUS_2 { get; set; }
-        public string? FLAG_WIPER_STATUS_1 { get; set; }
-        public string? FLAG_WIPER_STATUS_2 { get; set; }
-        public string? FLAG_WARNING_PANEL_STATUS_1 { get; set; }
-        public string? FLAG_WARNING_PANEL_STATUS_2 { get; set; }
-        public string? FLAG_TIRE_STATUS_1 { get; set; }
-        public string? FLAG_TIRE_STATUS_2 { get; set; }
-        public string? FLAG_JACK_WITH_HANDLE { get; set; }
-        public string? FLAG_SPARE_TIRE_WITH_RIM { get; set; }
-        public string? FLAG_TOOL_SPARK_WRENCH { get; set; }
-        public string? FLAG_TOOL_WHEEL_WRENCH { get; set; }
-        public string? FLAG_TOOL_ADJUST_WRENCH { get; set; }
-        public string? FLAG_TOOL_RING_WRENCH { get; set; }
-        public string? FLAG_TOOL_OPEN_WRENCH { get; set; }
-        public string? FLAG_TOOL_PLIERS { get; set; }
-        public string? FLAG_TOOL_LOCK_PLIERS { get; set; }
-        public string? FLAG_TOOL_SCREWDRIVER { get; set; }
+        public string? FLAG_BODY_STS1_HTML { get; set; }
+        public string? FLAG_BODY_STS2_HTML { get; set; }
+        public string? FLAG_LIGHT_STS1_HTML { get; set; }
+        public string? FLAG_LIGHT_STS2_HTML { get; set; }
+        public string? FLAG_WIPER_STS1_HTML { get; set; }
+        public string? FLAG_WIPER_STS2_HTML { get; set; }
+        public string? FLAG_WARN_PANEL1_HTML { get; set; }
+        public string? FLAG_WARN_PANEL2_HTML { get; set; }
+        public string? FLAG_TIRE_STS1_HTML { get; set; }
+        public string? FLAG_TIRE_STS2_HTML { get; set; }
+        public string? FLAG_JACK_W_HANDLE_HTML { get; set; }
+        public string? FLAG_SPARE_TIRE_RIM_HTML { get; set; }
+        public string? FLAG_TOOL_SPK_WR_HTML { get; set; }
+        public string? FLAG_TOOL_WHEEL_WR_HTML { get; set; }
+        public string? FLAG_TOOL_ADJ_WR_HTML { get; set; }
+        public string? FLAG_TOOL_RING_WR_HTML { get; set; }
+        public string? FLAG_TOOL_OPEN_WR_HTML { get; set; }
+        public string? FLAG_TOOL_PLIERS_HTML { get; set; }
+        public string? FLAG_TOOL_LOCK_PLI_HTML { get; set; }
+        public string? FLAG_TOOL_SCREWDRV_HTML { get; set; }
         public string? TOOL_OTHER_REMARK { get; set; }
         public string? VEH_CONTROLLER { get; set; }
         public string? DRIVER_SIGN_1 { get; set; }

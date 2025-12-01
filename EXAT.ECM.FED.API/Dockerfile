@@ -65,6 +65,11 @@ COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/FEDFuelExpenseReqTemplate.docx", "/
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/FEDPoliceFuelExceedTemplate.docx", "/app/DocumentTemplate/FED/"]
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/FEDIncomptFuelTaxInvTemplate.docx", "/app/DocumentTemplate/FED/"]
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/FEDFuelFleetCardTemplate.docx", "/app/DocumentTemplate/FED/"]
+COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/FEDFuelFleetCardBankTemplate.docx", "/app/DocumentTemplate/FED/"]
+COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/VehicleRepairRequestTemplate.docx", "/app/DocumentTemplate/FED/"]
+COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/DailyVehicleInspectionTemplate.docx", "/app/DocumentTemplate/FED/"]
+COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/VehicleHandoverTemplate.docx", "/app/DocumentTemplate/FED/"]
+
 
 
 # ASPOSE

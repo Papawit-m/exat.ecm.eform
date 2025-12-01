@@ -64,8 +64,6 @@ namespace EXAT.ECM.FED.API.Controllers
         private string FEDPoliceFuelExceedTemplate = "DocumentTemplate/FED/FEDPoliceFuelExceedTemplate.docx";
         private string FEDIncomptFuelTaxInvTemplate = "DocumentTemplate/FED/FEDIncomptFuelTaxInvTemplate.docx";
         private string FEDFuelFleetCardTemplate = "DocumentTemplate/FED/FEDFuelFleetCardTemplate.docx";
-        private string FEDFuelFleetCard_Header_Template = "DocumentTemplate/FED/FEDFuelFleetCardTemplate_List.docx"; 
-        private string FEDFuelFleetCard_Detail_Template = "DocumentTemplate/FED/FEDFuelFleetCardTemplate_Detail.docx";
         private string test = "DocumentTemplate/FED/test.docx";
         private string VehicleHandoverTemplate = "DocumentTemplate/FED/VehicleHandoverTemplate.docx";
         private string DailyVehicleInspectionTemplate = "DocumentTemplate/FED/DailyVehicleInspectionTemplate.docx";
