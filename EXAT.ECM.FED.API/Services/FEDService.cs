@@ -1880,5 +1880,220 @@ namespace EXAT.ECM.FED.API.Services
             }
             throw new ArgumentException("Invalid filename format. Only files starting with VAT_ or NOVAT_ are supported.");
         }
+
+
+        #region VehicleInspectionDelivery
+        public async Task<FED_HEADER_VehicleInspectionDelivery1> GetVehicleInspectionDelivery1(FEDParameterModel request)
+        {
+            FED_HEADER_VehicleInspectionDelivery1 result = new FED_HEADER_VehicleInspectionDelivery1();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVehicleInspectionDelivery1 ");
+                SuccessResponse<FED_HEADER_VehicleInspectionDelivery1> response = new SuccessResponse<FED_HEADER_VehicleInspectionDelivery1>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+                 
+                _logger.LogInformation("Calling Oracle "); 
+                var header = await GetVehicleInspectionDeliveryData1(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_VehicleInspectionDelivery1>> GetVehicleInspectionDeliveryData1(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_VehicleInspectionDelivery1>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7108_GETDATA_DLY_N_TOOLS_1 (
+                                            :P_HEADER_ID,
+	                                        :OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+
+        public async Task<FED_HEADER_VehicleInspectionDelivery2> GetVehicleInspectionDelivery2(FEDParameterModel request)
+        {
+            FED_HEADER_VehicleInspectionDelivery2 result = new FED_HEADER_VehicleInspectionDelivery2();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVehicleInspectionDelivery2 ");
+                SuccessResponse<FED_HEADER_VehicleInspectionDelivery2> response = new SuccessResponse<FED_HEADER_VehicleInspectionDelivery2>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                _logger.LogInformation("Calling Oracle ");
+                var header = await GetVehicleInspectionDeliveryData2(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_VehicleInspectionDelivery2>> GetVehicleInspectionDeliveryData2(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_VehicleInspectionDelivery2>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7108_GETDATA_DLY_N_TOOLS_2 (
+                                            :P_HEADER_ID,
+	                                        :OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+
+        public async Task<FED_HEADER_VehicleInspectionDelivery3> GetVehicleInspectionDelivery3(FEDParameterModel request)
+        {
+            FED_HEADER_VehicleInspectionDelivery3 result = new FED_HEADER_VehicleInspectionDelivery3();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVehicleInspectionDelivery3 ");
+                SuccessResponse<FED_HEADER_VehicleInspectionDelivery3> response = new SuccessResponse<FED_HEADER_VehicleInspectionDelivery3>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                _logger.LogInformation("Calling Oracle ");
+                var header = await GetVehicleInspectionDeliveryData3(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_VehicleInspectionDelivery3>> GetVehicleInspectionDeliveryData3(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_VehicleInspectionDelivery3>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7108_GETDATA_DLY_N_TOOLS_3 (
+                                            :P_HEADER_ID,
+	                                        :OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+
+        public async Task<FED_HEADER_VehicleInspectionDelivery4> GetVehicleInspectionDelivery4(FEDParameterModel request)
+        {
+            FED_HEADER_VehicleInspectionDelivery4 result = new FED_HEADER_VehicleInspectionDelivery4();
+            try
+            {
+                // เริ่มต้น Log เมื่อเริ่มกระบวนการ
+                _logger.LogInformation("Starting GetVehicleInspectionDelivery4 ");
+                SuccessResponse<FED_HEADER_VehicleInspectionDelivery4> response = new SuccessResponse<FED_HEADER_VehicleInspectionDelivery4>()
+                {
+                    Status = "S",
+                    StatusCode = "200"
+                };
+
+                _logger.LogInformation("Calling Oracle ");
+                var header = await GetVehicleInspectionDeliveryData4(request);
+
+                result = header.FirstOrDefault();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        private async Task<List<FED_HEADER_VehicleInspectionDelivery4>> GetVehicleInspectionDeliveryData4(FEDParameterModel request)
+        {
+
+            var p1 = request.p_HEADER_ID ?? (object)DBNull.Value;
+            try
+            {
+                var result = await _oracleContext
+                    .Set<FED_HEADER_VehicleInspectionDelivery4>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7108_GETDATA_DLY_N_TOOLS_4 (
+                                            :P_HEADER_ID,
+	                                        :OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_HEADER_ID", request.p_HEADER_ID ?? (object)DBNull.Value),
+                    new OracleParameter("OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
+                return null;
+            }
+        }
+        #endregion
     }
 }

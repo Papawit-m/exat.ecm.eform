@@ -102,6 +102,12 @@ namespace EXAT.ECM.FED.API.Controllers
         private string VehicleRepairRequestTemplate = "DocumentTemplate/FED/VehicleRepairRequestTemplate.docx";
         private string FEDFuelFleetCardBank = "DocumentTemplate/FED/FEDFuelFleetCardBankTemplate.docx";
 
+        #region Vehicle Inspection Delivery Templates
+        private string VehicleInspectionDelivery1Template = "DocumentTemplate/FED/VehicleInspectionDeliveryTemplate1.docx";
+        private string VehicleInspectionDelivery2Template = "DocumentTemplate/FED/VehicleInspectionDeliveryTemplate2.docx";
+        private string VehicleInspectionDelivery3Template = "DocumentTemplate/FED/VehicleInspectionDeliveryTemplate3.docx";
+        private string VehicleInspectionDelivery4Template = "DocumentTemplate/FED/VehicleInspectionDeliveryTemplate4.docx";
+        #endregion
 
         private object stackTrace;
 
@@ -460,6 +466,93 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
+
+                #region VehicleInspectionDelivery บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ
+
+                if (p_Template == "VehicleInspectionDelivery1Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery1Template");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery1Template);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    //// get data from oracle
+                    var data = _fedService.GetVehicleInspectionDelivery1(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+
+                    replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.SetCheckboxes(document, d_header);
+
+                    document.Save(memoryStream, p_FileName);
+                }
+                if (p_Template == "VehicleInspectionDelivery2Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery2Template");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery2Template);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    //// get data from oracle
+                    var data = _fedService.GetVehicleInspectionDelivery2(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+
+                    replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.SetCheckboxes(document, d_header);
+
+                    document.Save(memoryStream, p_FileName);
+                }
+                if (p_Template == "VehicleInspectionDelivery3Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery3Template");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery3Template);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    //// get data from oracle
+                    var data = _fedService.GetVehicleInspectionDelivery3(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+
+                    replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.SetCheckboxes(document, d_header);
+
+                    document.Save(memoryStream, p_FileName);
+                }
+                if (p_Template == "VehicleInspectionDelivery4Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(4)
+                {
+                    if (string.IsNullOrEmpty(p_FileName))
+                    {
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery4Template");
+                    }
+                    string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery4Template);
+                    var apOption = new AsposeHelperOption(_asposeOption, _environment);
+                    AsposeHelper document = new AsposeHelper(contentPath, _asposeOption, _environment, apOption.option());
+                    ReplaceWords replacWords = new ReplaceWords();
+
+                    //// get data from oracle
+                    var data = _fedService.GetVehicleInspectionDelivery4(request);
+                    var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+
+                    replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.SetCheckboxes(document, d_header);
+
+                    document.Save(memoryStream, p_FileName);
+                }
+                #endregion
+
+
+
                 if (memoryStream != null)
                 {
                     if(p_Template != "FleetCardFuelUsageTemplate")

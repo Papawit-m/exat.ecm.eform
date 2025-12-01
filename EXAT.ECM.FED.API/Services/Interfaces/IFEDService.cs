@@ -20,7 +20,7 @@ namespace EXAT.ECM.FED.API.Services.Interfaces
         //FUELFLEETCARD REPORT
         Task<FuelFleetCard> GetFuelFleetCardFormAsync(ParameterHEADER_REPORT request);
         Task<List<Header_Report>> GetLIST_HEADER_REPORTFormAsync(FEDParameterModel request);
-        
+
         //Import Feed card
         Task<ImportResult> ImportFileExcelFED(FEDParameterModel request);
 
@@ -41,5 +41,13 @@ namespace EXAT.ECM.FED.API.Services.Interfaces
         Task<T_TEMP_FED_IMPORT_FLEETCARD_ERROR> DownloadErrorExcel(FEDParameterModel request);
 
         Task<ImportResultBankFED<Dictionary<string, string?>>> ImportTransactionsAsync(FEDParameterModel request);
+
+        #region VehicleInspectionDelivery
+        Task<FED_HEADER_VehicleInspectionDelivery1> GetVehicleInspectionDelivery1(FEDParameterModel request);
+        Task<FED_HEADER_VehicleInspectionDelivery2> GetVehicleInspectionDelivery2(FEDParameterModel request);
+        Task<FED_HEADER_VehicleInspectionDelivery3> GetVehicleInspectionDelivery3(FEDParameterModel request);
+        Task<FED_HEADER_VehicleInspectionDelivery4> GetVehicleInspectionDelivery4(FEDParameterModel request);
+        #endregion
+
     }
 }

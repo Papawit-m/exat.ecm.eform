@@ -50,6 +50,13 @@ namespace EXAT.ECM.FED.API.DAL
             modelBuilder.Entity<ImportResult>().HasNoKey();
             modelBuilder.Entity<T_TEMP_FED_IMPORT_FLEETCARD_ERROR>().HasNoKey();
             modelBuilder.Entity<T_TEMP_FED_IMPORT_FLEETCARD_ERROR_LIST>().HasNoKey();
+            
+            
+            modelBuilder.Entity<VehicleInspectionDelivery>().HasNoKey();
+            modelBuilder.Entity<FED_HEADER_VehicleInspectionDelivery1>().HasNoKey();
+            modelBuilder.Entity<FED_HEADER_VehicleInspectionDelivery2>().HasNoKey();
+            modelBuilder.Entity<FED_HEADER_VehicleInspectionDelivery3>().HasNoKey();
+            modelBuilder.Entity<FED_HEADER_VehicleInspectionDelivery4>().HasNoKey();
 
 
             
