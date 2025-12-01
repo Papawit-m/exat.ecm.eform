@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Aspose.Pdf.Operators;
 using Aspose.Words.Bibliography;
 using Aspose.Pdf.AI;
+using System.Web;
 namespace EXAT.ECM.FED.API.Controllers
 {
     [ApiController]
@@ -196,6 +197,7 @@ namespace EXAT.ECM.FED.API.Controllers
                 FEDParameterModel request = new FEDParameterModel();
                 #region set parameter
                 string[] splitParam = new string[0];
+                p_Parameter = HttpUtility.UrlDecode(p_Parameter);
                 if (!string.IsNullOrEmpty(p_Parameter))
                     splitParam = p_Parameter.Split(new Char[] { '|' });
 
