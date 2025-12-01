@@ -23,6 +23,7 @@
         public string? DOC_DATE { get; set; }
         public string? EXPRESSWAY_NAME { get; set; }
         public string? DIRECTION_NAME { get; set; }
+        public string? STATUS_NAME { get; set; }
     }
 
     public class EER_DETAIL_FOOTER_REPORT

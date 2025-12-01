@@ -17,7 +17,16 @@ using OfficeOpenXml;
 using Oracle.ManagedDataAccess.Client;
 using EXAT.ECM.FED.API.Models.IMPORT;
 using EXAT.ECM.FED.API.DAL;
-using System.Data; 
+using System.Data;
+using EXAT.ECM.FED.API.Services;
+using System.Text;
+using System.IO.Compression;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Aspose.Pdf.Operators;
+using Aspose.Words.Bibliography;
+using Aspose.Pdf.AI;
 namespace EXAT.ECM.FED.API.Controllers
 {
     [ApiController]
@@ -32,14 +41,32 @@ namespace EXAT.ECM.FED.API.Controllers
         private readonly ILoggingService _loggingService;
         private readonly OracleDbContext _oracleContext;
         private readonly IFleetCardRepository _repository;
-        
+        private readonly IBatchInsertService _batchInsert;
+        private readonly IProgressTrackingService _progressTracking;
+
+        private static readonly Dictionary<string, string> MonthAbbr = new()
+        {
+            {"01","JAN"},{"02","FEB"},{"03","MAR"},{"04","APR"},{"05","MAY"},{"06","JUN"},
+            {"07","JUL"},{"08","AUG"},{"09","SEP"},{"10","OCT"},{"11","NOV"},{"12","DEC"}
+        };
+
+        // Static constructor เพื่อ register encoding provider ครั้งเดียว
+        static EXATFEDController()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        }
+
         public EXATFEDController(ILogger<EXATFEDController> logger
                                   , IOptions<AsposeOption> asposeOption
                                   , IWebHostEnvironment environment
                                   , IFEDService fedService
                                   , IConfiguration configuration
-                                  ,ILoggingService loggingService
-                                  ,IFleetCardRepository repository
+                                  , ILoggingService loggingService
+                                  , IFleetCardRepository repository
+                                  , IProgressTrackingService progressTracking
+                                  , IBatchInsertService batchInsert
+                                  , OracleDbContext oracleContext
+
                                   )
         {
             _logger = logger;
@@ -53,8 +80,13 @@ namespace EXAT.ECM.FED.API.Controllers
             _fedService = fedService;
             _loggingService = loggingService;
             _repository = repository;
+            _progressTracking = progressTracking;
+            _batchInsert = batchInsert;
+            _oracleContext = oracleContext;
             _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
         }
+
         private string VehicleRequestTemplate = "DocumentTemplate/FED/VehicleRequestTemplate.docx"; 
         private string DailyVehiuseTemplate = "DocumentTemplate/FED/FEDDailyVehiUsageTemplate.docx";
         private string MonthlyVehiuseTemplate = "DocumentTemplate/FED/FEDMonthlyVehicleUsageTemplate.docx";
@@ -158,14 +190,14 @@ namespace EXAT.ECM.FED.API.Controllers
                 FEDParameterModel request = new FEDParameterModel();
                 #region set parameter
                 string[] splitParam = new string[0];
-                p_Parameter = Uri.UnescapeDataString(p_Parameter);
                 if (!string.IsNullOrEmpty(p_Parameter))
-                splitParam = p_Parameter.Split(new Char[] { '|' });
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
 
                 foreach (string paramItem in splitParam)
                 {
                     _logger.LogInformation($"paramItem {paramItem} ");
                     string[] paramVal = paramItem.Split('=');
+
                     if (paramVal != null && paramVal.Length == 2)
                     {
                         switch (paramVal[0])
@@ -365,7 +397,7 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-                if (p_Template == "DailyVehicleInspectionTemplate") //บันทึกการตรวจรถประจำวัน
+                if (p_Template == "DailyVehiuseTemplate") //บันทึกการตรวจรถประจำวัน
                 {
                     if (string.IsNullOrEmpty(p_FileName))
                     {
@@ -1088,6 +1120,2032 @@ namespace EXAT.ECM.FED.API.Controllers
                     System.Console.WriteLine($"[FATAL] Failed to write error log: {logEx.Message}");
                 }
                 return StatusCode(500, new { message = $"Failed to insert transaction: {ex.Message}" });
+            }
+        }
+
+
+        // Section New Import Bank Feed Crad TxT
+
+        /// <summary>
+        /// โหลด Template Config จาก FLEET_CARD_IMPORT_CONFIGS
+        /// </summary>
+        private async Task<List<TemplateFieldConfig>> LoadTemplateConfigAsync(string templateName)
+        {
+            var configs = new List<TemplateFieldConfig>();
+
+            try
+            {
+                using var connection = await _oracleContext.GetOpenConnectionAsync();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT 
+                        FIELD_NAME, 
+                        SOURCE_COLUMN_NAME, 
+                        SOURCE_COLUMN_INDEX,
+                        IS_REQUIRED 
+                    FROM FLEET_CARD_IMPORT_CONFIGS
+                    WHERE TEMPLATE_NAME = :templateName
+                    ORDER BY CONFIG_ID";
+
+                var param = cmd.CreateParameter();
+                param.ParameterName = "templateName";
+                param.Value = templateName;
+                cmd.Parameters.Add(param);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    configs.Add(new TemplateFieldConfig
+                    {
+                        FieldName = reader.GetString(0),
+                        SourceColumnName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                        SourceColumnIndex = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2),
+                        IsRequired = reader.GetInt32(3) == 1
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "Failed to load template config", $"Template: {templateName}");
+                throw;
+            }
+
+            return configs;
+        }
+
+        /// <summary>
+        /// Validate row ตาม config
+        /// </summary>
+        private (bool isValid, string? errorMessage) ValidateRow(string[] headers, string[] row, List<TemplateFieldConfig> configs)
+        {
+            foreach (var config in configs.Where(c => c.IsRequired))
+            {
+                var value = GetColumnValue(headers, row, config);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    return (false, $"Required field '{config.FieldName}' is missing or empty");
+                }
+            }
+            return (true, null);
+        }
+
+        /// <summary>
+        /// ดึงค่า column จาก row ตาม config
+        /// </summary>
+        private string? GetColumnValue(string[] headers, string[] row, TemplateFieldConfig config)
+        {
+            // ถ้ามี SOURCE_COLUMN_INDEX ใช้ index
+            if (config.SourceColumnIndex.HasValue && config.SourceColumnIndex.Value < row.Length)
+            {
+                return row[config.SourceColumnIndex.Value];
+            }
+
+            // ถ้ามี SOURCE_COLUMN_NAME ค้นหา index จาก header
+            if (!string.IsNullOrEmpty(config.SourceColumnName))
+            {
+                var index = Array.FindIndex(headers, h => h.Equals(config.SourceColumnName, StringComparison.OrdinalIgnoreCase));
+                if (index >= 0 && index < row.Length)
+                {
+                    return row[index];
+                }
+            }
+
+            // ถ้าไม่มีทั้งคู่ ให้ค้นหาจาก FIELD_NAME
+            var fieldIndex = Array.FindIndex(headers, h => h.Equals(config.FieldName, StringComparison.OrdinalIgnoreCase));
+            if (fieldIndex >= 0 && fieldIndex < row.Length)
+            {
+                return row[fieldIndex];
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Config class for template fields
+        /// </summary>
+        private class TemplateFieldConfig
+        {
+            public string FieldName { get; set; } = string.Empty;
+            public string? SourceColumnName { get; set; }
+            public int? SourceColumnIndex { get; set; }
+            public bool IsRequired { get; set; }
+        }
+
+
+        private async Task<ImportResult> ReadTextFileInternal(string? fileName, string? p_Parameter)
+        {
+            var result = new ImportResult();
+            try
+            {
+                FEDParameterModel request = new FEDParameterModel();
+                
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+                
+                var FileList = await GetFileFromDatabase(request);
+                var File = FileList?.FirstOrDefault();
+
+                if (File == null || string.IsNullOrEmpty(File.CONTENT_VALUE))
+                {
+                    
+                    result.Status = "E";
+                    result.Message = "ไม่พบไฟล์ที่เกี่ยวข้อง";
+                    return result;
+                }
+
+                if (!File.FILE_NAME.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Status = "E";
+                    result.Message = "Only .txt files are supported";
+                    return result;
+                }
+
+                // Save to temp file
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+                var filePath = Path.Combine(tempDir, File.FILE_NAME);
+                var fileBytes = Convert.FromBase64String(File.CONTENT_VALUE);
+
+                //using (var stream = new FileStream(filePath, FileMode.Create))
+                //{
+                //    await FileExcel.FILE_CONTENT.CopyToAsync(stream);
+                //}                
+
+                // อ่านไฟล์ด้วย Windows-874 (TIS-620) เพื่อรองรับภาษาไทย
+                var encoding = Encoding.GetEncoding(874);
+                // เขียนเนื้อไฟล์ (string) ลงไฟล์ชั่วคราว
+                await System.IO.File.WriteAllBytesAsync(filePath, fileBytes);
+
+                var lines = await System.IO.File.ReadAllLinesAsync(filePath, encoding);
+                var records = new List<Dictionary<string, string>>();
+
+                if (lines.Length == 0)
+                {
+                    result.Status = "S";
+                    result.Message = "File is empty";
+                    result.RecordCount = "0";
+                    result.Data = records.ToString();
+                    return result;
+                }
+
+                // อ่าน header จาก row แรก
+                var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+
+                // อ่านข้อมูลจาก row 2 เป็นต้นไป
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+
+                    if (values.Length != headers.Length)
+                    {
+                        continue; // ข้าม row ที่จำนวน column ไม่ตรง
+                    }
+
+                    var record = new Dictionary<string, string>();
+                    for (int j = 0; j < headers.Length; j++)
+                    {
+                        record[headers[j]] = values[j];
+                    }
+                    records.Add(record);
+                }
+
+                result.Status = "S";
+                result.FileName = File.FILE_NAME;
+                result.RecordCount = "0";
+                result.Data = records.ToString();
+                
+
+                // Cleanup temp file
+                if (System.IO.File.Exists(filePath))
+                {
+                    try
+                    {
+                        var dir = Path.GetDirectoryName(filePath);
+                        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                    }
+                    catch { /* Ignore cleanup errors */ }
+                }
+
+                return result;
+            }
+            catch (System.Exception ex)
+            {
+
+                result.Status = "E";
+                result.Message = ex.Message;
+                result.Data = ex.StackTrace;
+                return result;
+            }
+        }
+
+        private async Task ProcessZipInBackgroundAsync(string progressId, string[] textFiles, string zipFileName, string importBatchId, string tempDir, string? headerId = null, string templateName = "TEXT_TEMPLATE")
+        {
+            try
+            {
+                await _loggingService.LogInfoAsync("INFO", $"[{progressId}] ZIP import started: {zipFileName} ({textFiles.Length} files)");
+
+                // Load template config
+                var templateConfigs = await LoadTemplateConfigAsync(templateName);
+                if (templateConfigs.Count == 0)
+                {
+                    _progressTracking.SetError(progressId, $"Template config '{templateName}' not found");
+                    await _loggingService.LogErrorAsync("ERROR", new Exception("Template config not found"), $"[{progressId}] Template config not found", templateName);
+                    return;
+                }
+
+                var encoding = Encoding.GetEncoding(874);
+                var totalProcessed = 0;
+                var totalInserted = 0;
+                var totalFailed = 0;
+                var allErrors = new List<object>();
+
+                foreach (var txtFilePath in textFiles)
+                {
+                    var fileName = Path.GetFileName(txtFilePath);
+                    await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Processing file: {fileName}");
+
+                    using var reader = new StreamReader(txtFilePath, encoding);
+                    var headerLine = await reader.ReadLineAsync();
+                    if (string.IsNullOrEmpty(headerLine))
+                    {
+                        await _loggingService.LogInfoAsync("WARNING", $"[{progressId}] Empty file: {fileName}");
+                        continue;
+                    }
+
+                    var headers = headerLine.Split('|').Select(h => h.Trim()).ToArray();
+                    var fileInfo = new FileInfo(txtFilePath);
+                    var fileMeta = new
+                    {
+                        FileName = fileName,
+                        FileSize = fileInfo.Length,
+                        CreatedDate = fileInfo.CreationTime,
+                        ModifiedDate = fileInfo.LastWriteTime
+                    };
+
+                    var batch = new List<string[]>(1000);
+                    var fileProcessed = 0;
+
+                    string? line;
+                    while ((line = await reader.ReadLineAsync()) != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        var row = line.Split('|').Select(v => v.Trim()).ToArray();
+
+                        // Validate row ตาม config
+                        var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
+                        if (!isValid)
+                        {
+                            allErrors.Add(new { file = fileName, row = fileProcessed + 1, error = validationError });
+                            fileProcessed++;
+                            totalProcessed++;
+                            continue;
+                        }
+
+                        batch.Add(row);
+                        fileProcessed++;
+                        totalProcessed++;
+
+                        if (batch.Count >= 1000)
+                        {
+                            try
+                            {
+                                var (inserted, failed, batchErrors) = await _batchInsert.InsertBatchAsync(
+                                    "FLEET_CARD_TEMP_TRANS_TEXT",
+                                    headers,
+                                    batch,
+                                    importBatchId,
+                                    fileMeta,
+                                    (h, r) =>
+                                    {
+                                        var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
+                                        if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
+                                        {
+                                            return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
+                                        }
+                                        return (true, null);
+                                    },
+                                    headerId,
+                                    templateName
+                                );
+                                totalInserted += inserted;
+                                totalFailed += failed;
+                                allErrors.AddRange(batchErrors);
+                                _progressTracking.UpdateProgress(progressId, totalProcessed);
+                            }
+                            catch (Exception ex)
+                            {
+                                await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Batch insert failed - {fileName}");
+                                allErrors.Add(new { file = fileName, row = fileProcessed, error = ex.Message });
+                            }
+                            batch.Clear();
+                        }
+                    }
+
+                    // Insert remaining rows
+                    if (batch.Count > 0)
+                    {
+                        try
+                        {
+                            var (inserted, failed, batchErrors) = await _batchInsert.InsertBatchAsync(
+                                "FLEET_CARD_TEMP_TRANS_TEXT",
+                                headers,
+                                batch,
+                                importBatchId,
+                                fileMeta,
+                                (h, r) =>
+                                {
+                                    var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
+                                    if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
+                                    {
+                                        return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
+                                    }
+                                    return (true, null);
+                                },
+                                headerId,
+                                templateName
+                            );
+                            totalInserted += inserted;
+                            totalFailed += failed;
+                            allErrors.AddRange(batchErrors);
+                            _progressTracking.UpdateProgress(progressId, totalProcessed);
+                        }
+                        catch (Exception ex)
+                        {
+                            await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Final batch failed - {fileName}");
+                            allErrors.Add(new { file = fileName, error = ex.Message });
+                        }
+                    }
+
+                    await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Completed file: {fileName} ({fileProcessed} rows)");
+                }
+
+                _progressTracking.CompleteProgress(progressId, totalInserted, totalFailed, allErrors);
+                await _loggingService.LogInfoAsync("INFO", $"[{progressId}] ZIP import completed: {zipFileName} - {totalProcessed} rows processed");
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] ProcessZipInBackgroundAsync failed");
+                _progressTracking.SetError(progressId, ex.Message);
+            }
+            finally
+            {
+                // Cleanup temp directory
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                        await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Temp directory cleaned up: {tempDir}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await _loggingService.LogInfoAsync("WARNING", $"[{progressId}] Failed to cleanup temp directory: {ex.Message}");
+                }
+            }
+        }
+
+        private async Task ProcessTextInBackgroundAsync(string progressId, string filePath, string fileName, string? importBatchId, string? headerId = null, string templateName = "TEXT_TEMPLATE")
+        {
+            try
+            {
+                await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Text import started: {fileName}");
+
+                // Load template config
+                var templateConfigs = await LoadTemplateConfigAsync(templateName);
+                if (templateConfigs.Count == 0)
+                {
+                    _progressTracking.SetError(progressId, $"Template config '{templateName}' not found");
+                    await _loggingService.LogErrorAsync("ERROR", new Exception("Template config not found"), $"[{progressId}] Template config not found", templateName);
+                    return;
+                }
+
+                var encoding = Encoding.GetEncoding(874);
+
+                using var reader = new StreamReader(filePath, encoding);
+                var headerLine = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(headerLine))
+                {
+                    _progressTracking.SetError(progressId, "Empty file or missing header");
+                    return;
+                }
+
+                var headers = headerLine.Split('|').Select(h => h.Trim()).ToArray();
+                var fileInfo = new FileInfo(filePath);
+                var fileMeta = new
+                {
+                    FileName = fileName,
+                    FileSize = fileInfo.Length,
+                    CreatedDate = fileInfo.CreationTime,
+                    ModifiedDate = fileInfo.LastWriteTime
+                };
+
+                var batch = new List<string[]>(1000);
+                var processedRows = 0;
+                var errorList = new List<object>();
+
+                string? line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var row = line.Split('|').Select(v => v.Trim()).ToArray();
+
+                    // Validate row ตาม config
+                    var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
+                    if (!isValid)
+                    {
+                        errorList.Add(new { row = processedRows + 1, error = validationError });
+                        processedRows++;
+                        continue;
+                    }
+
+                    batch.Add(row);
+                    processedRows++;
+
+                    if (batch.Count >= 1000)
+                    {
+                        try
+                        {
+                            var (batchInserted, batchFailed, batchErrors) = await _batchInsert.InsertBatchAsync(
+                                "FLEET_CARD_TEMP_TRANS_TEXT",
+                                headers,
+                                batch,
+                                importBatchId ?? $"BATCH_{DateTime.Now:yyyyMMddHHmmss}",
+                                fileMeta,
+                                (h, r) =>
+                                {
+                                    // Additional validation
+                                    var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
+                                    if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
+                                    {
+                                        return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
+                                    }
+                                    return (true, null);
+                                },
+                                headerId,
+                                templateName
+                            );
+                            errorList.AddRange(batchErrors);
+                            _progressTracking.UpdateProgress(progressId, processedRows);
+                        }
+                        catch (Exception ex)
+                        {
+                            await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Batch insert failed at row {processedRows}");
+                            errorList.Add(new { row = processedRows, error = ex.Message });
+                        }
+                        batch.Clear();
+                    }
+                }
+
+                // Insert remaining rows
+                if (batch.Count > 0)
+                {
+                    try
+                    {
+                        var (batchInserted2, batchFailed2, batchErrors2) = await _batchInsert.InsertBatchAsync(
+                            "FLEET_CARD_TEMP_TRANS_TEXT",
+                            headers,
+                            batch,
+                            importBatchId ?? $"BATCH_{DateTime.Now:yyyyMMddHHmmss}",
+                            fileMeta,
+                            (h, r) =>
+                            {
+                                var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
+                                if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
+                                {
+                                    return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
+                                }
+                                return (true, null);
+                            },
+                            headerId,
+                            templateName
+                        );
+                        errorList.AddRange(batchErrors2);
+                        _progressTracking.UpdateProgress(progressId, processedRows);
+                    }
+                    catch (Exception ex)
+                    {
+                        await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Final batch insert failed");
+                        errorList.Add(new { row = processedRows, error = ex.Message });
+                    }
+                }
+
+                var totalErrors = errorList.Count;
+                var inserted = processedRows - totalErrors;
+                _progressTracking.CompleteProgress(progressId, inserted, totalErrors, errorList);
+                await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Text import completed: {processedRows} rows processed");
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] ProcessTextInBackgroundAsync failed");
+                _progressTracking.SetError(progressId, ex.Message);
+            }
+        }
+
+        private static string NormalizeHeader(string header)
+        {
+            // แปลง SPENDING_01_MM_YYYY_TO_DD_MM_YYYY → SPEND_MMM_YYYY
+            var match = Regex.Match(header, @"^SPENDING_01_(\d{2})_(\d{4})_TO_\d{2}_\d{2}_\d{4}$", RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                var monthNum = match.Groups[1].Value;
+                var year = match.Groups[2].Value;
+                if (MonthAbbr.TryGetValue(monthNum, out var monthAbbr))
+                {
+                    return $"SPEND_{monthAbbr}_{year}";
+                }
+            }
+            return header.Trim().ToUpperInvariant();
+        }
+
+        private async Task<List<T_TEMP_FED_FILE>> GetFileFromDatabase(FEDParameterModel request)
+        {
+
+            var p1 = request.p_TEMP_ID ?? (object)DBNull.Value;
+
+            var result = await _oracleContext
+                    .Set<T_TEMP_FED_FILE>()
+                   .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7404_SP_GET_FILE_EXCEL (
+                                            :P_TEMP_ID,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                    new OracleParameter("p_TEMP_ID", request.p_TEMP_ID ?? (object)DBNull.Value),
+                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+                .ToListAsync();
+            return result;
+
+        }
+
+        private static (bool isValid, string? errorMessage) ValidateRow(string[] headers, string[] values)
+        {
+            // หา index ของ CARD_NO
+            var cardNoIndex = Array.FindIndex(headers, h =>
+                string.Equals(h.Trim(), "CARD_NO", StringComparison.OrdinalIgnoreCase));
+
+            if (cardNoIndex >= 0 && cardNoIndex < values.Length)
+            {
+                var cardNo = values[cardNoIndex]?.Trim();
+                if (!string.IsNullOrEmpty(cardNo) && cardNo.Length != 16)
+                {
+                    return (false, $"CARD_NO must be 16 digits, got: {cardNo.Length} digits");
+                }
+            }
+
+            return (true, null);
+        }
+
+        private async Task<(int inserted, int failed, List<object> errors, string importBatchId, string? headerId)> InsertRowsAsync(
+            string tableName,
+            string[] headers,
+            List<string[]> rows,
+            string importBatchId,
+            dynamic fileMeta,
+            string? headerId = null,
+            string templateName = "TEXT_TEMPLATE")
+        {
+            using var conn = await _oracleContext.GetOpenConnectionAsync();
+
+            // Load template config
+            var templateConfigs = await LoadTemplateConfigAsync(templateName);
+            if (templateConfigs.Count == 0)
+            {
+                throw new Exception($"Template config '{templateName}' not found");
+            }
+
+            // Load actual table columns (uppercase)
+            var validColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var cmdCols = conn.CreateCommand())
+            {
+                cmdCols.CommandText = "SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = :t";
+                var p = cmdCols.CreateParameter();
+                p.ParameterName = ":t";
+                p.Value = tableName.ToUpperInvariant();
+                cmdCols.Parameters.Add(p);
+                using var reader = await cmdCols.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    validColumns.Add(reader.GetString(0));
+                }
+            }
+
+            // Build column mapping from template config: FIELD_NAME -> file column index
+            var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var config in templateConfigs)
+            {
+                if (string.IsNullOrEmpty(config.SourceColumnName)) continue;
+
+                // Find header index matching SOURCE_COLUMN_NAME
+                var idx = Array.FindIndex(headers, h =>
+                    h.Equals(config.SourceColumnName, StringComparison.OrdinalIgnoreCase));
+
+                if (idx >= 0 && validColumns.Contains(config.FieldName))
+                {
+                    columnMapping[config.FieldName] = idx;
+                }
+            }
+
+            var headerCols = columnMapping.Keys.ToList();
+
+            // Optional metadata columns if exist
+            bool hasFileName = validColumns.Contains("FILE_NAME");
+            bool hasFileSize = validColumns.Contains("FILE_SIZE");
+            bool hasCreated = validColumns.Contains("FILE_CREATED_DATE");
+            bool hasModified = validColumns.Contains("FILE_LAST_MODIFIED_DATE");
+            bool hasBatch = validColumns.Contains("IMPORT_BATCH_ID");
+            bool hasHeaderId = validColumns.Contains("HEADER_ID");
+            bool hasTemplateName = validColumns.Contains("TEMPLATE_NAME");
+
+            var metaCols = new List<string>();
+            if (hasBatch) metaCols.Add("IMPORT_BATCH_ID");
+            if (hasHeaderId) metaCols.Add("HEADER_ID");
+            if (hasTemplateName) metaCols.Add("TEMPLATE_NAME");
+            if (hasFileName) metaCols.Add("FILE_NAME");
+            if (hasFileSize) metaCols.Add("FILE_SIZE");
+            if (hasCreated) metaCols.Add("FILE_CREATED_DATE");
+            if (hasModified) metaCols.Add("FILE_LAST_MODIFIED_DATE");
+
+            int inserted = 0;
+            int failed = 0;
+            var errors = new List<object>();
+
+            foreach (var row in rows)
+            {
+                // Validate row ตาม config
+                var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
+                if (!isValid)
+                {
+                    failed++;
+                    if (errors.Count < 20)
+                    {
+                        errors.Add(new { row = inserted + failed, error = validationError });
+                    }
+                    continue;
+                }
+
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+
+                    var allCols = metaCols.Concat(headerCols).ToList();
+                    var paramNames = new List<string>();
+
+                    foreach (var col in allCols)
+                    {
+                        var param = cmd.CreateParameter();
+                        param.ParameterName = ":" + col;
+                        if (col == "IMPORT_BATCH_ID") param.Value = importBatchId;
+                        else if (col == "HEADER_ID") param.Value = !string.IsNullOrEmpty(headerId) ? (object)headerId : DBNull.Value;
+                        else if (col == "TEMPLATE_NAME") param.Value = templateName;
+                        else if (col == "FILE_NAME") param.Value = (object)fileMeta.FileName ?? DBNull.Value;
+                        else if (col == "FILE_SIZE") param.Value = (object)Convert.ToDecimal(fileMeta.FileSize) ?? DBNull.Value;
+                        else if (col == "FILE_CREATED_DATE") param.Value = (object)(DateTime)fileMeta.FileCreatedDate;
+                        else if (col == "FILE_LAST_MODIFIED_DATE") param.Value = (object)(DateTime)fileMeta.FileLastModifiedDate;
+                        else
+                        {
+                            // Use columnMapping to get file column index from FIELD_NAME
+                            if (columnMapping.TryGetValue(col, out int idx))
+                            {
+                                param.Value = idx < row.Length ? (object)row[idx] ?? DBNull.Value : DBNull.Value;
+                            }
+                            else
+                            {
+                                param.Value = DBNull.Value;
+                            }
+                        }
+                        cmd.Parameters.Add(param);
+                        paramNames.Add(param.ParameterName);
+                    }
+
+                    cmd.CommandText = $"INSERT INTO {tableName} (" + string.Join(",", allCols) + ") VALUES (" + string.Join(",", paramNames) + ")";
+                    await cmd.ExecuteNonQueryAsync();
+                    inserted++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    if (errors.Count < 20)
+                    {
+                        errors.Add(new { row = inserted + failed, error = ex.Message });
+                    }
+                }
+            }
+
+            return (inserted, failed, errors, importBatchId, headerId);
+        }
+
+        /// <summary>
+        /// อ่านไฟล์ TEXT และแปลงเป็น JSON
+        /// POST: api/TextFileReader/read (upload file via form-data)
+        /// </summary>
+        [HttpPost("ReadTextFile")]
+        public async Task<ImportResult> ReadTextFile([FromQuery] string? p_Parameter)
+        {
+            //[FromForm] IFormFile? file
+            var result = await ReadTextFileInternal(null, p_Parameter);
+            return result;
+        }
+
+        /// <summary>
+        /// อ่านไฟล์ TEXT จาก Base64 string และแปลงเป็น JSON
+        /// POST: api/TextFileReader/read/base64
+        /// </summary>
+        /// <param name="base64File">Base64 encoded string ของไฟล์</param>
+        /// <param name="fileName">ชื่อไฟล์ (ต้องลงท้ายด้วย .txt)</param>
+        [HttpPost("ReadTextFileBase64")]
+        public async Task<ImportResult> ReadTextFileBase64([FromQuery] string? p_Parameter)
+        {
+            
+            var result = new ImportResult();
+           
+            try
+            {
+                FEDParameterModel request = new FEDParameterModel();
+
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                var FileList = await GetFileFromDatabase(request);
+                var File = FileList?.FirstOrDefault();
+
+                if (File == null || string.IsNullOrEmpty(File.CONTENT_VALUE))
+                {
+
+                    result.Status = "E";
+                    result.Message = "ไม่พบไฟล์ที่เกี่ยวข้อง";
+                    return result;
+                }
+
+                if (!File.FILE_NAME.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Status = "E";
+                    result.Message = "Only .txt files are supported";
+                    return result;
+                }
+                                
+                // Decode base64 to bytes
+                byte[] fileBytes;
+                try
+                {
+                    fileBytes = Convert.FromBase64String(File.CONTENT_VALUE);
+                }
+                catch (FormatException)
+                {
+                    result.Status = "E";
+                    result.Message = "Invalid base64 format";
+                    return result;
+                }
+
+                // Save to temp file
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+                var filePath = Path.Combine(tempDir, File.FILE_NAME);
+
+                await System.IO.File.WriteAllBytesAsync(filePath, fileBytes);
+
+                var records = new List<Dictionary<string, string>>();
+
+                // อ่านไฟล์ด้วย Windows-874 (TIS-620) เพื่อรองรับภาษาไทย
+                var encoding = Encoding.GetEncoding(874);
+                var lines = await System.IO.File.ReadAllLinesAsync(filePath, encoding);
+
+                if (lines.Length == 0)
+                {
+                    result.Status = "S";
+                    result.Message = "File is empty";
+                    result.RecordCount = "0";
+                    result.Data = records.ToString();
+                    return result;
+                }
+
+                // อ่าน header จาก row แรก
+                var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+
+                // อ่านข้อมูลจาก row 2 เป็นต้นไป
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+
+                    if (values.Length != headers.Length)
+                    {
+                        continue; // ข้าม row ที่จำนวน column ไม่ตรง
+                    }
+
+                    var record = new Dictionary<string, string>();
+                    for (int j = 0; j < headers.Length; j++)
+                    {
+                        record[headers[j]] = values[j];
+                    }
+                    records.Add(record);
+                }
+                result.Status = "S";
+                result.FileName = File.FILE_NAME;
+                result.ColumnCount = headers.Length.ToString();
+                result.Headers = headers.ToString();
+                result.RecordCount = records.Count.ToString();
+                result.Data = records.ToString();
+                
+
+                // Cleanup temp file
+                if (System.IO.File.Exists(filePath))
+                {
+                    try
+                    {
+                        var dir = Path.GetDirectoryName(filePath);
+                        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                    }
+                    catch { /* Ignore cleanup errors */ }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Status = "E";
+                result.Message = ex.Message;
+                result.Data = ex.StackTrace;
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// อ่านไฟล์ ZIP ที่มี TEXT files หลายไฟล์และแปลงเป็น JSON
+        /// POST: api/TextFileReader/read-zip (upload ZIP file via form-data)
+        /// </summary>
+        [HttpPost("read-zip")]
+        public async Task<IActionResult> ReadZipFile([FromForm] IFormFile? zipFile)
+        {
+            try
+            {
+                if (zipFile == null || zipFile.Length == 0)
+                {
+                    return BadRequest(new { success = false, message = "ZIP file is required" });
+                }
+
+                if (!zipFile.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { success = false, message = "Only ZIP files are supported" });
+                }
+
+                // สร้าง temp directory สำหรับ extract
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+
+                try
+                {
+                    // Save ZIP file to temp
+                    var tempZipPath = Path.Combine(tempDir, zipFile.FileName);
+                    using (var stream = new FileStream(tempZipPath, FileMode.Create))
+                    {
+                        await zipFile.CopyToAsync(stream);
+                    }
+
+                    // Extract ZIP
+                    var extractDir = Path.Combine(tempDir, "extracted");
+                    ZipFile.ExtractToDirectory(tempZipPath, extractDir);
+
+                    // หา TEXT files ทั้งหมดใน ZIP
+                    var textFiles = Directory.GetFiles(extractDir, "*.txt", SearchOption.AllDirectories);
+
+                    if (textFiles.Length == 0)
+                    {
+                        return BadRequest(new { success = false, message = "No TEXT files found in ZIP" });
+                    }
+
+                    var encoding = Encoding.GetEncoding(874);
+                    var allFilesData = new List<object>();
+
+                    foreach (var txtFilePath in textFiles)
+                    {
+                        var fileName = Path.GetFileName(txtFilePath);
+                        var lines = await System.IO.File.ReadAllLinesAsync(txtFilePath, encoding);
+
+                        if (lines.Length == 0)
+                        {
+                            allFilesData.Add(new
+                            {
+                                fileName = fileName,
+                                success = true,
+                                message = "File is empty",
+                                recordCount = 0,
+                                data = new List<object>()
+                            });
+                            continue;
+                        }
+
+                        var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                        var records = new List<Dictionary<string, string>>();
+
+                        for (int i = 1; i < lines.Length; i++)
+                        {
+                            var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                            if (values.Length != headers.Length) continue;
+
+                            var record = new Dictionary<string, string>();
+                            for (int j = 0; j < headers.Length; j++)
+                            {
+                                record[headers[j]] = values[j];
+                            }
+                            records.Add(record);
+                        }
+
+                        allFilesData.Add(new
+                        {
+                            fileName = fileName,
+                            success = true,
+                            columnCount = headers.Length,
+                            headers = headers,
+                            recordCount = records.Count,
+                            data = records
+                        });
+                    }
+
+                    var result = new
+                    {
+                        success = true,
+                        zipFileName = zipFile.FileName,
+                        filesCount = textFiles.Length,
+                        files = allFilesData
+                    };
+
+                    // Cleanup temp directory
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+
+                    return Ok(result);
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup on error
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
+        /// อ่านไฟล์ ZIP จาก Base64 string ที่มี TEXT files หลายไฟล์
+        /// POST: api/TextFileReader/read-zip/base64
+        /// </summary>
+        [HttpPost("ReadZipFileBase64")]
+        public async Task<ImportResult> ReadZipFileBase64([FromQuery] string? p_Parameter)
+        {
+            var result = new ImportResult();
+            try
+            {
+                FEDParameterModel request = new FEDParameterModel();
+
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                var FileList = await GetFileFromDatabase(request);
+                var File = FileList?.FirstOrDefault();
+
+                if (File == null || string.IsNullOrEmpty(File.CONTENT_VALUE))
+                {
+
+                    result.Status = "E";
+                    result.Message = "ไม่พบไฟล์ที่เกี่ยวข้อง";
+                    return result;
+                }
+
+                if (!File.FILE_NAME.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Status = "E";
+                    result.Message = "Only .zip files are supported";
+                    return result;
+                }
+                
+
+                // Decode base64 to bytes
+                byte[] fileBytes;
+                try
+                {
+                    fileBytes = Convert.FromBase64String(File.CONTENT_VALUE);
+                }
+                catch (FormatException)
+                {
+                    result.Status = "E";
+                    result.Message = "Invalid base64 format";
+                    return result;
+                }
+
+                // สร้าง temp directory
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+
+                try
+                {
+                    // Save ZIP file
+                    var tempZipPath = Path.Combine(tempDir, File.FILE_NAME);
+                    await System.IO.File.WriteAllBytesAsync(tempZipPath, fileBytes);
+
+                    // Extract ZIP
+                    var extractDir = Path.Combine(tempDir, "extracted");
+                    ZipFile.ExtractToDirectory(tempZipPath, extractDir);
+
+                    // หา TEXT files ทั้งหมดใน ZIP
+                    var textFiles = Directory.GetFiles(extractDir, "*.txt", SearchOption.AllDirectories);
+
+                    if (textFiles.Length == 0)
+                    {
+                        result.Status = "E";
+                        result.Message = "No TEXT files found in ZIP";
+                        return result;
+                    }
+
+                    var encoding = Encoding.GetEncoding(874);
+                    var allFilesData = new List<object>();
+
+                    foreach (var txtFilePath in textFiles)
+                    {
+                        var txtFileName = Path.GetFileName(txtFilePath);
+                        var lines = await System.IO.File.ReadAllLinesAsync(txtFilePath, encoding);
+
+                        if (lines.Length == 0)
+                        {
+                            allFilesData.Add(new
+                            {
+                                fileName = txtFileName,
+                                success = true,
+                                message = "File is empty",
+                                recordCount = 0,
+                                data = new List<object>()
+                            });
+                            continue;
+                        }
+
+                        var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                        var records = new List<Dictionary<string, string>>();
+
+                        for (int i = 1; i < lines.Length; i++)
+                        {
+                            var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                            if (values.Length != headers.Length) continue;
+
+                            var record = new Dictionary<string, string>();
+                            for (int j = 0; j < headers.Length; j++)
+                            {
+                                record[headers[j]] = values[j];
+                            }
+                            records.Add(record);
+                        }
+
+                        allFilesData.Add(new
+                        {
+                            fileName = txtFileName,
+                            success = true,
+                            columnCount = headers.Length,
+                            headers = headers,
+                            recordCount = records.Count,
+                            data = records
+                        });
+                    }
+                    result.Status = "S";
+                    result.FileName = File.FILE_NAME;
+                    result.FilesCount = textFiles.Length.ToString();
+                    result.Data = allFilesData.ToString();
+                   
+
+                    // Cleanup temp directory
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup on error
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                    result.Status = "E";
+                    result.Message = ex.Message;
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Status = "E";
+                result.Message = ex.Message;
+                result.Data = ex.StackTrace;
+                return result;
+                
+            }
+        }
+
+        /// <summary>
+        /// Import TEXT file แบบ async สำหรับไฟล์ขนาดใหญ่
+        /// </summary>
+        /// <param name="fileName">ชื่อไฟล์ เช่น myfile.txt</param>
+        /// <param name="file">ไฟล์ที่ต้องการ upload (optional)</param>
+        /// <param name="importBatchId">Batch ID (optional) เช่น BATCH_2025_001</param>
+        /// <param name="headerId">Header ID (optional) รองรับ VARCHAR2(36) เช่น 550e8400-e29b-41d4-a716-446655440000 หรือ HDR-001</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/TextFileReader/import-async?fileName=test.txt&headerId=550e8400-e29b-41d4-a716-446655440000
+        ///     
+        /// หรือ
+        ///     
+        ///     POST /api/TextFileReader/import-async?fileName=test.txt&headerId=BATCH-2025-001
+        ///     
+        /// </remarks>
+        [HttpPost("import-async")]
+        public async Task<IActionResult> ImportTextAsync(
+            [FromForm] string? fileName,
+            [FromForm] IFormFile? file,
+            [FromForm] string? importBatchId = null,
+            [FromForm] string? headerId = null,
+            [FromForm] string templateName = "TEXT_TEMPLATE")
+        {
+            try
+            {
+                string filePath;
+                string actualFileName;
+                bool isUploadedFile = false;
+
+                if (file != null)
+                {
+                    // Upload mode
+                    if (file.Length == 0)
+                    {
+                        return BadRequest(new { success = false, message = "Uploaded file is empty" });
+                    }
+
+                    if (!file.FileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return BadRequest(new { success = false, message = "Only .txt files are supported" });
+                    }
+
+                    var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                    Directory.CreateDirectory(tempDir);
+                    filePath = Path.Combine(tempDir, file.FileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    actualFileName = file.FileName;
+                    isUploadedFile = true;
+                }
+                else if (!string.IsNullOrEmpty(fileName))
+                {
+                    // File path mode
+                    var basePath = Path.Combine(Directory.GetCurrentDirectory(), "SimpleFile", "TextFile");
+                    filePath = Path.Combine(basePath, fileName);
+                    actualFileName = fileName;
+
+                    if (!System.IO.File.Exists(filePath))
+                    {
+                        return NotFound(new { success = false, message = "File not found", path = filePath });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new { success = false, message = "Either fileName parameter or file upload is required" });
+                }
+
+                // นับจำนวนแถวทั้งหมดก่อน (เพื่อแสดง progress)
+                var totalRows = 0;
+                var encoding = Encoding.GetEncoding(874);
+                using (var counter = new StreamReader(filePath, encoding))
+                {
+                    var header = await counter.ReadLineAsync();
+                    while (await counter.ReadLineAsync() != null)
+                    {
+                        totalRows++;
+                    }
+                }
+
+                // สร้าง progressId และ initialize progress
+                var progressId = Guid.NewGuid().ToString();
+                _progressTracking.InitializeProgress(progressId, totalRows);
+
+                // Start background processing
+                var batchId = importBatchId ?? Guid.NewGuid().ToString();
+                _ = Task.Run(async () =>
+                {
+                    await ProcessTextInBackgroundAsync(progressId, filePath, actualFileName, batchId, headerId, templateName);
+
+                    // Cleanup temp file if uploaded
+                    if (isUploadedFile && System.IO.File.Exists(filePath))
+                    {
+                        try
+                        {
+                            var dir = Path.GetDirectoryName(filePath);
+                            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                        }
+                        catch { /* Ignore cleanup errors */ }
+                    }
+                });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Import started",
+                    progressId = progressId,
+                    totalRows = totalRows,
+                    fileName = actualFileName,
+                    importBatchId = batchId,
+                    headerId = headerId,
+                    source = isUploadedFile ? "uploaded" : "local"
+                });
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "ImportTextAsync failed", $"File: {fileName}");
+                return StatusCode(500, new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Import TEXT file จาก Base64 string แบบ async
+        /// </summary>
+        /// <param name="base64File">Base64 encoded TEXT file</param>
+        /// <param name="fileName">ชื่อไฟล์</param>
+        /// <param name="importBatchId">Batch ID (optional)</param>
+        /// <param name="headerId">Header ID (optional) รองรับ VARCHAR2(36)</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/TextFileReader/import-async/base64
+        ///     Content-Type: multipart/form-data
+        ///     base64File: UE9TVCAvYXBpL1RleHRGaWxlUmVhZGVyL2ltcG9ydC1hc3luYy9iYXNlNjQ=
+        ///     fileName: test.txt
+        ///     importBatchId: BATCH-001 (optional)
+        ///     headerId: 550e8400-e29b-41d4-a716-446655440000 (optional)
+        ///     
+        /// </remarks>
+        [HttpPost("ImportTextBase64Async")]
+        public async Task<ImportResult> ImportTextBase64Async(
+            [FromQuery] string? p_Parameter,
+            [FromQuery] string? importBatchId = null,
+            [FromQuery] string? headerId = null,
+            [FromQuery] string templateName = null)
+        {
+            var result = new ImportResult();
+            string fileName ="";
+            templateName = templateName ?? "TEXT_TEMPLATE";
+
+            try
+            {
+                FEDParameterModel request = new FEDParameterModel();
+
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                var FileList = await GetFileFromDatabase(request);
+                var File = FileList?.FirstOrDefault();
+                fileName = File.FILE_NAME;
+
+                if (File == null || string.IsNullOrEmpty(File.CONTENT_VALUE))
+                {
+
+                    result.Status = "E";
+                    result.Message = "ไม่พบไฟล์ที่เกี่ยวข้อง";
+                    return result;
+                }
+
+                if (!File.FILE_NAME.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Status = "E";
+                    result.Message = "Only .txt files are supported";
+                    return result;
+                }
+                
+                // Decode Base64
+                byte[] fileBytes;
+                try
+                {
+                    fileBytes = Convert.FromBase64String(File.CONTENT_VALUE);
+                }
+                catch (FormatException)
+                {
+                    result.Status = "E";
+                    result.Message = "Invalid Base64 string";
+                    return result;
+                }
+
+                if (fileBytes.Length == 0)
+                {
+                    result.Status = "E";
+                    result.Message = "Decoded file is empty";
+                    return result;
+                }
+
+                // Create temp directory and save file
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+                var filePath = Path.Combine(tempDir, File.FILE_NAME);
+
+                try
+                {
+                    await System.IO.File.WriteAllBytesAsync(filePath, fileBytes);
+
+                    // นับจำนวนแถวทั้งหมดก่อน
+                    var totalRows = 0;
+                    var encoding = Encoding.GetEncoding(874);
+                    using (var counter = new StreamReader(filePath, encoding))
+                    {
+                        var header = await counter.ReadLineAsync();
+                        while (await counter.ReadLineAsync() != null)
+                        {
+                            totalRows++;
+                        }
+                    }
+
+                    // สร้าง progressId และ initialize progress
+                    var progressId = Guid.NewGuid().ToString();
+                    _progressTracking.InitializeProgress(progressId, totalRows);
+
+                    // Start background processing
+                    var batchId = importBatchId ?? Guid.NewGuid().ToString();
+                    _ = Task.Run(async () =>
+                    {
+                        await ProcessTextInBackgroundAsync(progressId, filePath, File.FILE_NAME, batchId, headerId, templateName);
+
+                        // Cleanup temp file
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            try
+                            {
+                                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                            }
+                            catch { /* Ignore cleanup errors */ }
+                        }
+                    });
+
+                    result.Status = "S";
+                    result.Message = "Import started";
+                    result.ProgressId = progressId;
+                    result.TotalRows = totalRows.ToString();
+                    result.FileName = File.FILE_NAME;
+                    result.ImportBatchId = batchId;
+                    result.Headers = headerId;
+                    result.Source = "base64";
+
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup on error
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                    result.Status = "E";
+                    result.Message = ex.Message;
+                    return result;
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "ImportTextBase64Async failed", $"File: {fileName}");
+                result.Status = "E";
+                result.Message = ex.Message;
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Upload และ Import ZIP file ที่มี TEXT files หลายไฟล์
+        /// </summary>
+        /// <param name="zipFile">ไฟล์ ZIP ที่มีไฟล์ TEXT หลายไฟล์</param>
+        /// <param name="importBatchId">Batch ID (optional)</param>
+        /// <param name="headerId">Header ID (optional) รองรับ VARCHAR2(36)</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/TextFileReader/import-zip?headerId=550e8400-e29b-41d4-a716-446655440000
+        ///     Content-Type: multipart/form-data
+        ///     zipFile: [ZIP file containing multiple TEXT files]
+        ///     
+        /// headerId Format Examples:
+        /// - UUID: 550e8400-e29b-41d4-a716-446655440000
+        /// - Custom: BATCH-2025-001, HDR-12345, IMPORT-001
+        /// - Max length: 36 characters
+        ///     
+        /// </remarks>
+        [HttpPost("import-zip")]
+        public async Task<IActionResult> ImportZipAsync(
+            [FromForm] IFormFile zipFile,
+            [FromForm] string? importBatchId = null,
+            [FromForm] string? headerId = null,
+            [FromForm] string templateName = "TEXT_TEMPLATE")
+        {
+            try
+            {
+                if (zipFile == null || zipFile.Length == 0)
+                {
+                    return BadRequest(new { success = false, message = "ZIP file is required" });
+                }
+
+                if (!zipFile.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { success = false, message = "Only ZIP files are supported" });
+                }
+
+                // สร้าง temp directory สำหรับ extract
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+
+                try
+                {
+                    // Save ZIP file to temp
+                    var tempZipPath = Path.Combine(tempDir, zipFile.FileName);
+                    using (var stream = new FileStream(tempZipPath, FileMode.Create))
+                    {
+                        await zipFile.CopyToAsync(stream);
+                    }
+
+                    // Extract ZIP
+                    var extractDir = Path.Combine(tempDir, "extracted");
+                    ZipFile.ExtractToDirectory(tempZipPath, extractDir);
+
+                    // หา TEXT files ทั้งหมดใน ZIP
+                    var textFiles = Directory.GetFiles(extractDir, "*.txt", SearchOption.AllDirectories);
+
+                    if (textFiles.Length == 0)
+                    {
+                        return BadRequest(new { success = false, message = "No TEXT files found in ZIP" });
+                    }
+
+                    // นับ total rows จากทุกไฟล์
+                    var totalRows = 0;
+                    var encoding = Encoding.GetEncoding(874);
+                    var fileDetails = new List<object>();
+
+                    foreach (var txtFile in textFiles)
+                    {
+                        var fileName = Path.GetFileName(txtFile);
+                        var rowCount = 0;
+                        using (var counter = new StreamReader(txtFile, encoding))
+                        {
+                            await counter.ReadLineAsync(); // skip header
+                            while (await counter.ReadLineAsync() != null)
+                            {
+                                rowCount++;
+                            }
+                        }
+                        totalRows += rowCount;
+                        fileDetails.Add(new { fileName, rows = rowCount });
+                    }
+
+                    // สร้าง progressId และ initialize
+                    var progressId = Guid.NewGuid().ToString();
+                    _progressTracking.InitializeProgress(progressId, totalRows);
+
+                    // Start background processing
+                    var batchId = importBatchId ?? $"ZIP_{DateTime.Now:yyyyMMddHHmmss}";
+                    _ = Task.Run(async () =>
+                    {
+                        await ProcessZipInBackgroundAsync(progressId, textFiles, zipFile.FileName, batchId, tempDir, headerId, templateName);
+                    });
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "ZIP import started",
+                        progressId = progressId,
+                        zipFileName = zipFile.FileName,
+                        filesFound = textFiles.Length,
+                        totalRows = totalRows,
+                        importBatchId = batchId,
+                        headerId = headerId,
+                        files = fileDetails
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup on error
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "ImportZipAsync failed", $"File: {zipFile?.FileName}");
+                return StatusCode(500, new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// ตรวจสอบสถานะการ import
+        /// GET: api/TextFileReader/import-progress/{progressId}
+        /// </summary>
+        [HttpGet("ImportProgress/{progressId}")]
+        public IActionResult GetImportProgress(string progressId)
+        {
+            var progress = _progressTracking.GetProgress(progressId);
+            if (progress == null)
+            {
+                return NotFound(new { success = false, message = "Progress not found" });
+            }
+            return Ok(progress);
+        }
+
+        /// <summary>
+        /// Import ZIP file จาก Base64 string ที่มี TEXT files หลายไฟล์
+        /// POST: api/TextFileReader/import-zip/base64
+        /// </summary>
+        /// <param name="base64File">Base64 encoded ZIP file</param>
+        /// <param name="fileName">ชื่อไฟล์ ZIP</param>
+        /// <param name="importBatchId">Batch ID (optional)</param>
+        /// <param name="headerId">Header ID (optional)</param>
+        [HttpPost("ImportZipBase64Async")]
+        public async Task<ImportResult> ImportZipBase64Async(
+            [FromQuery] string? p_Parameter,
+            [FromQuery] string? importBatchId = null,
+            [FromQuery] string? headerId = null,
+            [FromQuery] string templateName = null)
+        {
+            var result = new ImportResult();
+            string fileName = "";
+            templateName = templateName ?? "TEXT_TEMPLATE";
+
+            try
+            {
+                FEDParameterModel request = new FEDParameterModel();
+
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                var FileList = await GetFileFromDatabase(request);
+                var File = FileList?.FirstOrDefault();
+                fileName = File.FILE_NAME;
+
+                if (File == null || string.IsNullOrEmpty(File.CONTENT_VALUE))
+                {
+
+                    result.Status = "E";
+                    result.Message = "ไม่พบไฟล์ที่เกี่ยวข้อง";
+                    return result;
+                }
+
+                if (!File.FILE_NAME.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Status = "E";
+                    result.Message = "Only .zip files are supported";
+                    return result;
+                }
+
+                // Decode Base64 to bytes
+                byte[] zipBytes;
+                try
+                {
+                    zipBytes = Convert.FromBase64String(File.CONTENT_VALUE);
+                }
+                catch (FormatException)
+                {
+                    result.Status = "E";
+                    result.Message = "Invalid Base64 string";
+                    return result;
+                }
+
+                // สร้าง temp directory สำหรับ extract
+                var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+
+                try
+                {
+                    // Save ZIP file to temp
+                    var tempZipPath = Path.Combine(tempDir, fileName);
+                    await System.IO.File.WriteAllBytesAsync(tempZipPath, zipBytes);
+
+                    // Extract ZIP
+                    var extractDir = Path.Combine(tempDir, "extracted");
+                    ZipFile.ExtractToDirectory(tempZipPath, extractDir);
+
+                    // หา TEXT files ทั้งหมดใน ZIP
+                    var textFiles = Directory.GetFiles(extractDir, "*.txt", SearchOption.AllDirectories);
+
+                    if (textFiles.Length == 0)
+                    {
+                        result.Status = "E";
+                        result.Message = "No TEXT files found in ZIPg";
+                        return result;
+                    }
+
+                    // นับ total rows จากทุกไฟล์
+                    var totalRows = 0;
+                    var encoding = Encoding.GetEncoding(874);
+                    var fileDetails = new List<object>();
+
+                    foreach (var txtFile in textFiles)
+                    {
+                        var txtFileName = Path.GetFileName(txtFile);
+                        var rowCount = 0;
+                        using (var counter = new StreamReader(txtFile, encoding))
+                        {
+                            await counter.ReadLineAsync(); // skip header
+                            while (await counter.ReadLineAsync() != null)
+                            {
+                                rowCount++;
+                            }
+                        }
+                        totalRows += rowCount;
+                        fileDetails.Add(new { fileName = txtFileName, rows = rowCount });
+                    }
+
+                    // สร้าง progressId และ initialize
+                    var progressId = Guid.NewGuid().ToString();
+                    _progressTracking.InitializeProgress(progressId, totalRows);
+
+                    // Start background processing
+                    var batchId = importBatchId ?? $"ZIP_{DateTime.Now:yyyyMMddHHmmss}";
+                    _ = Task.Run(async () =>
+                    {
+                        await ProcessZipInBackgroundAsync(progressId, textFiles, fileName, batchId, tempDir, headerId, templateName);
+                    });
+
+                    result.Status = "S";
+                    result.Message = "ZIP import started";
+                    result.ProgressId = progressId;
+                    result.FileName = fileName;
+                    result.FilesFound = textFiles.Length.ToString();
+                    result.TotalRows = totalRows.ToString();
+                    result.ImportBatchId = batchId;
+                    result.Headers = headerId;
+                    result.FileDetails = fileDetails.ToString();
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup on error
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                    throw;
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "ImportZipBase64Async failed", $"File: {fileName}");
+                result.Status = "E";
+                result.Message = ex.Message;
+
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Import TEXT file rows into staging table FLEET_CARD_TEMP_TRANS_TEXT
+        /// POST: api/TextFileReader/import (all parameters via form-data)
+        /// </summary>
+        [HttpPost("ImportTextToStaging")]
+        public async Task<ImportResult> ImportTextToStaging(
+            [FromQuery] string? p_Parameter,
+            [FromQuery] string? importBatchId = null,
+            [FromQuery] string? headerId = null,
+            [FromQuery] string templateName = null)
+        {
+            var result = new ImportResult();
+            string fileName = "";
+            templateName = templateName ?? "TEXT_TEMPLATE";
+
+            try
+            {
+                string filePath;
+                string actualFileName;
+                bool isUploadedFile = false;
+
+                FEDParameterModel request = new FEDParameterModel();
+
+                #region set parameter
+                string[] splitParam = new string[0];
+                if (!string.IsNullOrEmpty(p_Parameter))
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
+                foreach (string paramItem in splitParam)
+                {
+                    string[] paramVal = paramItem.Split('=');
+                    if (paramVal != null && paramVal.Length == 2)
+                    {
+                        switch (paramVal[0])
+                        {
+                            case "p_TEMP_ID": request.p_TEMP_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
+                        }
+                    }
+                }
+                #endregion
+
+                var FileList = await GetFileFromDatabase(request);
+                var File = FileList?.FirstOrDefault();
+                fileName = File.FILE_NAME;
+
+                if (File == null || string.IsNullOrEmpty(File.CONTENT_VALUE))
+                {
+
+                    result.Status = "E";
+                    result.Message = "ไม่พบไฟล์ที่เกี่ยวข้อง";
+                    return result;
+                }
+
+                if (!File.FILE_NAME.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Status = "E";
+                    result.Message = "Only .txt files are supported";
+                    return result;
+                }
+
+                if (File != null)
+                {
+                    var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                    Directory.CreateDirectory(tempDir);
+                    filePath = Path.Combine(tempDir, File.FILE_NAME);
+                    var fileBytes = Convert.FromBase64String(File.CONTENT_VALUE);
+
+                    await System.IO.File.WriteAllBytesAsync(filePath, fileBytes);
+
+                    actualFileName = File.FILE_NAME;
+                    isUploadedFile = true;
+                }
+                else if (!string.IsNullOrWhiteSpace(fileName))
+                {
+                    var basePath = Path.Combine(Directory.GetCurrentDirectory(), "SimpleFile", "TextFile");
+                    filePath = Path.Combine(basePath, fileName);
+                    actualFileName = fileName;
+
+                    if (!System.IO.File.Exists(filePath))
+                    {
+                        result.Status = "E";
+                        result.Message = $"File not found: {fileName}";
+                        result.Data = basePath;
+                        return result;
+                    }
+                }
+                else
+                {
+                    result.Status = "E";
+                    result.Message = "Either fileName parameter or file upload is required";
+                    return result;
+                }
+
+                // Read file
+                var encoding = Encoding.GetEncoding(874);
+                var lines = await System.IO.File.ReadAllLinesAsync(filePath, encoding);
+                if (lines.Length <= 1)
+                {
+                    result.Status = "E";
+                    result.Message = "No data rows found";
+                    return result;
+                }
+
+                var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                var dataRows = new List<string[]>();
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                    if (values.Length == headers.Length)
+                    {
+                        dataRows.Add(values);
+                    }
+                }
+
+                // File metadata
+                var fi = new FileInfo(filePath);
+                var meta = new
+                {
+                    FileName = fi.Name,
+                    FileSize = fi.Length,
+                    FileCreatedDate = System.IO.File.GetCreationTime(filePath),
+                    FileLastModifiedDate = System.IO.File.GetLastWriteTime(filePath)
+                };
+
+                // Insert
+                await _loggingService.LogInfoAsync($"TEXT import start: {actualFileName}", $"Batch={importBatchId ?? "(auto)"}; Path={filePath}; Rows={dataRows.Count}; Source={(isUploadedFile ? "uploaded" : "local")}; Template={templateName}");
+
+                var resultInsertRow = await InsertRowsAsync(
+                    tableName: "FLEET_CARD_TEMP_TRANS_TEXT",
+                    headers: headers,
+                    rows: dataRows,
+                    importBatchId: string.IsNullOrWhiteSpace(importBatchId) ? Guid.NewGuid().ToString() : importBatchId!,
+                    fileMeta: meta,
+                    headerId: headerId,
+                    templateName: templateName
+                );
+
+                await _loggingService.LogInfoAsync($"TEXT import complete: {actualFileName}", $"Batch={resultInsertRow.importBatchId}; Inserted={resultInsertRow.inserted}; Failed={resultInsertRow.failed}");
+
+                result.Status = "S";
+                result.Message = "FLEET_CARD_TEMP_TRANS_TEXT";
+                result.FileName = meta.FileName;
+                result.ImportBatchId = resultInsertRow.importBatchId;
+                result.Headers = resultInsertRow.headerId;
+                result.Total = dataRows.Count.ToString();
+                result.Inserted = resultInsertRow.inserted.ToString();
+                result.Failed = resultInsertRow.failed.ToString();
+                result.Errors = resultInsertRow.errors.ToString();
+                result.Source = isUploadedFile ? "uploaded" : "local";
+
+               
+                // Cleanup temp file if uploaded
+                if (isUploadedFile && System.IO.File.Exists(filePath))
+                {
+                    try
+                    {
+                        var dir = Path.GetDirectoryName(filePath);
+                        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                    }
+                    catch { /* Ignore cleanup errors */ }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "TEXT import failed", $"File={fileName}; Batch={importBatchId}");
+                result.Status = "E";
+                result.Message = ex.Message;
+                result.Data = ex.StackTrace;
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// สรุปผลการนำเข้าตาม Batch ID
+        /// GET: api/TextFileReader/import/summary?batchId=xxx&headerId=xxx
+        /// </summary>
+        [HttpGet("ImportSummary")]
+        public async Task<IActionResult> GetImportSummary(
+            [FromQuery] string? batchId = null,
+            [FromQuery] string? importBatchId = null,
+            [FromQuery] string? headerId = null)
+        {
+            try
+            {
+                // Support both parameter names for backward compatibility
+                var actualBatchId = batchId ?? importBatchId;
+
+                if (string.IsNullOrWhiteSpace(actualBatchId) && string.IsNullOrWhiteSpace(headerId))
+                {
+                    return BadRequest(new { success = false, message = "batchId or headerId parameter is required" });
+                }
+
+                using var conn = await _oracleContext.GetOpenConnectionAsync();
+                using var cmd = conn.CreateCommand();
+
+                var whereConditions = new List<string>();
+                if (!string.IsNullOrWhiteSpace(actualBatchId))
+                    whereConditions.Add("IMPORT_BATCH_ID = :batchId");
+                if (!string.IsNullOrWhiteSpace(headerId))
+                    whereConditions.Add("HEADER_ID = :headerId");
+
+                cmd.CommandText = $@"
+                    SELECT 
+                        IMPORT_BATCH_ID,
+                        HEADER_ID,
+                        MIN(FILE_NAME) AS FILE_NAME,
+                        MIN(FILE_SIZE) AS FILE_SIZE,
+                        MIN(IMPORT_DATE) AS IMPORT_DATE,
+                        PROCESSING_STATUS,
+                        COUNT(*) AS RECORD_COUNT
+                    FROM FLEET_CARD_TEMP_TRANS_TEXT
+                    WHERE {string.Join(" AND ", whereConditions)}
+                    GROUP BY IMPORT_BATCH_ID, HEADER_ID, PROCESSING_STATUS
+                    ORDER BY PROCESSING_STATUS";
+
+                if (!string.IsNullOrWhiteSpace(actualBatchId))
+                {
+                    var paramBatch = cmd.CreateParameter();
+                    paramBatch.ParameterName = ":batchId";
+                    paramBatch.Value = actualBatchId;
+                    cmd.Parameters.Add(paramBatch);
+                }
+
+                if (!string.IsNullOrWhiteSpace(headerId))
+                {
+                    var paramHeader = cmd.CreateParameter();
+                    paramHeader.ParameterName = ":headerId";
+                    paramHeader.Value = headerId;
+                    cmd.Parameters.Add(paramHeader);
+                }
+
+                var summary = new List<object>();
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    summary.Add(new
+                    {
+                        importBatchId = reader.GetString(0),
+                        headerId = reader.IsDBNull(1) ? null : reader.GetString(1),
+                        fileName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        fileSize = reader.IsDBNull(3) ? (long?)null : Convert.ToInt64(reader.GetValue(3)),
+                        importDate = reader.IsDBNull(4) ? (DateTime?)null : reader.GetDateTime(4),
+                        processingStatus = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        recordCount = Convert.ToInt32(reader.GetValue(6))
+                    });
+                }
+
+                if (summary.Count == 0)
+                {
+                    return NotFound(new { success = false, message = $"No records found for batch: {actualBatchId ?? "(none)"}, header: {headerId ?? "(none)"}" });
+                }
+
+                return Ok(new { success = true, importBatchId = actualBatchId, headerId = headerId, summary });
+            }
+            catch (Exception ex)
+            {
+                var actualBatchId = batchId ?? importBatchId;
+                await _loggingService.LogErrorAsync("ERROR", ex, "Failed to retrieve import summary", $"Batch={actualBatchId}");
+                return StatusCode(500, new { success = false, error = ex.Message });
             }
         }
     }

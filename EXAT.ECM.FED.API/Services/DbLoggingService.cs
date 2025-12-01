@@ -34,6 +34,29 @@ namespace EXAT.ECM.FED.API.Services
         public Task LogWarnAsync(string message, string? detail = null, CancellationToken ct = default)
             => LogAsync("WARN", null, message, detail ?? string.Empty, ct);
 
+        public async Task LogInfoAsync(string message, string? contextInfo = null)
+        {
+            try
+            {
+                await using var connection = await _db.GetOpenConnectionAsync();
+                await using var command = new Oracle.ManagedDataAccess.Client.OracleCommand(@"INSERT INTO FLEET_CARD_APP_LOGS (LOG_TIMESTAMP, LOG_LEVEL, MESSAGE, STACK_TRACE, CONTEXT_INFO)
+                    VALUES (SYSTIMESTAMP, :logLevel, :message, NULL, :contextInfo)", connection)
+                {
+                    CommandType = System.Data.CommandType.Text
+                };
+
+                command.Parameters.Add(":logLevel", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2, 20).Value = "INFO";
+                command.Parameters.Add(":message", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2, 4000).Value = message;
+                command.Parameters.Add(":contextInfo", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2, 1000).Value = contextInfo ?? string.Empty;
+
+                await command.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WARN: Could not write INFO log. {ex.Message}");
+            }
+        }
+
         // ============== Core ==============
 
         private async Task LogAsync(
