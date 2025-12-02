@@ -1,8 +1,10 @@
-﻿using EXAT.ECM.EService.API.Handlers;
+﻿using EXAT.ECM.EService.API.DAL;
+using EXAT.ECM.EService.API.Handlers;
 using EXAT.ECM.EService.API.Middleware;
 using EXAT.ECM.EService.API.Model.Configuration;
 using EXAT.ECM.EService.API.Services.Implementations;
 using EXAT.ECM.EService.API.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,17 @@ builder.Services.AddTransient<LoggingHttpClientHandler>();
 // Configure EXAT API settings
 builder.Services.Configure<ExatApiSettings>(builder.Configuration.GetSection(ExatApiSettings.SectionName));
 
+builder.Services.AddScoped<IAccessSessionService, AccessSessionService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+
+//builder.Services.AddDbContext<OracleDbContext>(options =>
+//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+
+builder.Services.AddDbContext<OracleDbContext>(options =>
+        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+
 // Add HttpClient for EXAT API service with logging
+
 builder.Services.AddHttpClient<IExatApiService, ExatApiService>(client =>
 {
     var settings = builder.Configuration.GetSection(ExatApiSettings.SectionName).Get<ExatApiSettings>();

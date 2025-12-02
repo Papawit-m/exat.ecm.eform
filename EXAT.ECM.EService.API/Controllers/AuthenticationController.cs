@@ -4,6 +4,12 @@ using EXAT.ECM.EService.API.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using EXAT.ECM.EService.API.Model.Responses;
+using EXAT.ECM.EService.API.Helpers;
+using EXAT.ECM.EService.API.Services.Implementations;
+using Microsoft.AspNetCore.Http;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Mail;
 
 namespace EXAT.ECM.EService.API.Controllers
 {
@@ -14,10 +20,18 @@ namespace EXAT.ECM.EService.API.Controllers
         private readonly IExatApiService _exatApiService;
         private readonly ILogger<AuthenticationController> _logger;
         private readonly ExatApiSettings _exatSettings;
+        private readonly ISessionService _sessionService;
+        //private readonly HttpContext httpContext;
 
-        public AuthenticationController(IExatApiService exatApiService, ILogger<AuthenticationController> logger,IOptions<ExatApiSettings> exatSettings)
+        public AuthenticationController(
+            IExatApiService exatApiService,
+            ILogger<AuthenticationController> logger,
+            IOptions<ExatApiSettings> exatSettings,
+            ISessionService sessionService
+            )
         {
             _exatApiService = exatApiService;
+            _sessionService = sessionService;
             _exatSettings = exatSettings.Value;
             _logger = logger;
         }
@@ -312,5 +326,271 @@ namespace EXAT.ECM.EService.API.Controllers
                 return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
+
+        [HttpGet("CreateSessionToken")]
+        public async Task<IActionResult> CreateSessionToken([FromQuery] string? clientId = null)
+        {
+            try
+            {
+                K2Response<SessionTokenResponse> errorResponse = null!;
+
+                // Client must provide clientId (unique identifier from client browser/device)
+                if (string.IsNullOrWhiteSpace(clientId))
+                {
+                    errorResponse = K2Response<SessionTokenResponse>.Error(400,
+                                        "clientId is required. Please provide a unique client identifier (e.g., GUID generated on client-side). Example: /api/session/create?clientId=12345678-1234-1234-1234-123456789abc"
+                                    );
+
+                    return Ok(new {
+                        statusCode = errorResponse.StatusCode,
+                        message = errorResponse.Message
+                    });
+                }
+
+                // Use clientId as deviceId
+                var deviceId = clientId.Trim();
+
+                // Create device info from HTTP request
+                var deviceInfo = new DeviceInfo
+                {
+                    MacAddress = deviceId, // Store clientId in MacAddress field (for internal use only, not returned)
+                    IpAddress = DeviceInfoExtractor.GetClientIpAddress(HttpContext),
+                    RealIpAddress = DeviceInfoExtractor.GetRealIpAddress(HttpContext),
+                    UserAgent = DeviceInfoExtractor.GetUserAgent(HttpContext),
+                    IsVpnConnection = DeviceInfoExtractor.IsVpnConnection(HttpContext),
+                    RegisteredAt = DateTime.Now,
+                    LastConnectedAt = DateTime.Now,
+                    Status = "Active"
+                };
+
+                // Get server device information (hostname and MAC addresses)
+                var serverDeviceInfo = new ServerDeviceInfoModel
+                {
+                    Hostname = ClientDeviceInfo.GetHostname(),
+                    PrimaryMacAddress = ClientDeviceInfo.GetPrimaryMacAddress(),
+                    NetworkInterfaces = ClientDeviceInfo.GetNetworkInterfaces(),
+                    RetrievedAt = DateTime.Now
+                };
+
+                // Create or get existing session token
+                var session = await _sessionService.CreateSessionAsync(deviceId, null, deviceInfo);
+
+                // Add server device info to response
+                session.ServerDeviceInfo = serverDeviceInfo;
+
+                var response = K2Response<SessionTokenResponse>.Success(
+                                session,
+                                "Session token retrieved successfully. Store this token in K2 SmartObject for future requests."
+                            );
+                var firstNic = response.Data.ServerDeviceInfo.NetworkInterfaces.FirstOrDefault();
+
+                return Ok(new
+                {
+                    statusCode = response.StatusCode,
+                    message = response.Message,
+                    totalRecords = response.TotalRecords,
+                    sessionToken = response.Data.SessionToken,
+                    expiresAt = response.Data.ExpiresAt,
+                    isNewSession = response.Data.IsNewSession,
+                    ipAddress = response.Data.DeviceInfo.IpAddress,
+                    realIpAddress = response.Data.DeviceInfo.RealIpAddress,
+                    userAgent = response.Data.DeviceInfo.UserAgent,
+                    deviceInfosessionToken = response.Data.DeviceInfo.SessionToken,
+                    isVpnConnection = response.Data.DeviceInfo.IsVpnConnection,
+                    registeredAt = response.Data.DeviceInfo.RegisteredAt,
+                    lastConnectedAt = response.Data.DeviceInfo.LastConnectedAt,
+                    deviceInfostatus = response.Data.DeviceInfo.Status,
+                    serverDeviceInfohostname = response.Data.ServerDeviceInfo.Hostname,
+                    primaryMacAddress = response.Data.ServerDeviceInfo.PrimaryMacAddress,
+                    networkInterfacesname = firstNic?.Name,
+                    networkInterfacesdescription = firstNic?.Description,
+                    networkInterfacestype = firstNic?.Type,
+                    networkInterfacesstatus = firstNic?.Status,
+                    networkInterfacesmacAddress = firstNic?.MacAddress,
+                    networkInterfacesisActive = firstNic?.IsActive,
+                    networkInterfacesdhcpEnabled = firstNic?.DhcpEnabled,
+                    networkInterfacesipv4Addresses = firstNic?.IPv4Addresses,
+                    networkInterfacesipv6Addresses = firstNic?.IPv6Addresses,
+                    networkInterfacessubnetMasks = firstNic?.SubnetMasks,
+                    networkInterfacesdefaultGateways = firstNic?.DefaultGateways,
+                    networkInterfacesdnsServers = firstNic?.DnsServers,
+                    networkInterfacesdnsSuffix = firstNic?.DnsSuffix,
+                    metadata = response.Metadata
+                }
+                );
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = K2Response<SessionTokenResponse>.Error(
+                                        2,
+                                        $"Error: {ex.Message}"
+                                    );
+                return Ok(new
+                {
+                    statusCode = errorResponse.StatusCode,
+                    message = errorResponse.Message
+                });
+            }
+        }
+
+        [HttpGet("ValidateSessionToken")]
+        public async Task<IActionResult> ValidateSessionToken([FromQuery] string? token = null) 
+        {
+            try
+            {
+                K2Response<object> errorResponse = null!;
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    errorResponse = K2Response<object>.Error(400,
+                                        "Session token is required (?token=xxx)"
+                                    );
+
+                    return Ok(new
+                    {
+                        statusCode = errorResponse.StatusCode,
+                        message = errorResponse.Message
+                    });
+                }
+
+                var deviceInfo = new DeviceInfo
+                {
+                    SessionToken = token,
+                    IpAddress = DeviceInfoExtractor.GetClientIpAddress(HttpContext),
+                    RealIpAddress = DeviceInfoExtractor.GetRealIpAddress(HttpContext),
+                    UserAgent = DeviceInfoExtractor.GetUserAgent(HttpContext),
+                    DeviceName = DeviceInfoExtractor.GetDeviceName(HttpContext),
+                    IsVpnConnection = DeviceInfoExtractor.IsVpnConnection(HttpContext),
+                    LastConnectedAt = DateTime.Now
+                };
+                var response = K2Response<DeviceInfo>.Success(
+                                deviceInfo,
+                                "Session validated successfully"
+                            );
+
+                return Ok(new
+                {
+                    statusCode = response.StatusCode,
+                    message = response.Message,
+                    sessionToken = response.Data.SessionToken,
+                    clientIp = response.Data.IpAddress,
+                    realIp = response.Data.RealIpAddress,
+                    userAgent = response.Data.UserAgent,
+                    deviceName = response.Data.DeviceName,
+                    isVpnConnection = response.Data.IsVpnConnection,
+                    validatedAt = response.Data.LastConnectedAt
+
+                }
+                );
+            }
+            catch (Exception ex)
+            {
+
+                var errorResponse = K2Response<object>.Error(
+                                        1,
+                                        $"Error: {ex.Message}"
+                                    );
+                return Ok(new
+                {
+                    statusCode = errorResponse.StatusCode,
+                    message = errorResponse.Message
+                });
+            }
+        }
+
+        [HttpPost("ClearSessionToken")]
+        public async Task<IActionResult> ClearSessionToken([FromQuery] string? token = null)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    var errorResponse = K2Response<object>.Error(
+                                        400,
+                                        $"Session token is required (?token=xxx)"
+                                    );
+                    return Ok(new
+                    {
+                        statusCode = errorResponse.StatusCode,
+                        message = errorResponse.Message
+                    });
+                }
+
+                var result = await _sessionService.ClearSessionAsync(token);
+
+                if (result)
+                {
+                    var successResponse = K2Response<object>.Success(
+                                        200,
+                                        $"Session token cleared successfully"
+                                    );
+                    return Ok(new
+                    {
+                        statusCode = successResponse.StatusCode,
+                        message = successResponse.Message,
+                        token,
+                        ClearedAt = DateTime.Now
+                    });
+                }
+                else
+                {
+                    var errorResponse = K2Response<object>.Error(
+                                        404,
+                                        $"Session token not found or already expired"
+                                    );
+                    return Ok(new
+                    {
+                        statusCode = errorResponse.StatusCode,
+                        message = errorResponse.Message
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = K2Response<object>.Error(
+                                        1,
+                                        $"Error: {ex.Message}"
+                                    );
+                return Ok(new
+                {
+                    statusCode = errorResponse.StatusCode,
+                    message = errorResponse.Message
+                });
+                
+            }
+        }
+       
+        [HttpPost("ClearAllSessions")]
+        public async Task<IActionResult> ClearAllSessions()
+        {
+            try
+            {
+                var count = await _sessionService.ClearAllSessionsAsync();
+
+                var successResponse = K2Response<object>.Success(
+                                        200,
+                                        $"Cleared {count} session token(s) successfully"
+                                    );
+                return Ok(new
+                {
+                    statusCode = successResponse.StatusCode,
+                    message = successResponse.Message,
+                    ClearedCount = count,
+                    ClearedAt = DateTime.Now
+                });
+            }
+            catch (Exception ex)
+            {
+                var errorResponse = K2Response<object>.Error(
+                                        1,
+                                        $"Error: {ex.Message}"
+                                    );
+                return Ok(new
+                {
+                    statusCode = errorResponse.StatusCode,
+                    message = errorResponse.Message
+                });
+            }
+        }
+
     }
 }
