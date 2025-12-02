@@ -509,9 +509,13 @@ namespace EXAT.ECM.FED.API.Controllers
                     var data = _fedService.GetMonthlyVehiUsageAsync(request);
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
                     var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
+                    var d_total = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail.FirstOrDefault());
+                    //var d_total = data.Result?.TOTAL == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.TOTAL);
+
                     _logger.LogInformation("Detail JSON: {result}", JsonSerializer.Serialize(d_detail, new JsonSerializerOptions { WriteIndented = true }));
                     replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                     replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.ReplaceNodeText(document, d_total);
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
                     document.Save(memoryStream, p_FileName);
                 }

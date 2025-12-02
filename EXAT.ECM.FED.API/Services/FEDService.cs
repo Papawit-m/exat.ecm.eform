@@ -223,13 +223,11 @@ namespace EXAT.ECM.FED.API.Services
                 // เรียกข้อมูลจาก Oracle
                 var header = await GetHeaderMonthlyVehiUsageAsync(request);
                 var detail = await GetDetailMonthlyVehiUsageAsync(request);
-
                 result = header.FirstOrDefault();
                 result.Detail = detail;
-
                 // Log หลังจากได้รับข้อมูลจาก Oracle
-                _logger.LogInformation("Received {HeaderData} records from Oracle.", header.Count);
-                _logger.LogInformation("Received {DetailData} records from Oracle.", detail.Count);
+                //_logger.LogInformation("Received {HeaderData} records from Oracle.", header.Count);
+                //_logger.LogInformation("Received {DetailData} records from Oracle.", detail.Count);
 
                 return result;
             }
@@ -265,7 +263,9 @@ namespace EXAT.ECM.FED.API.Services
         }
         public async Task<List<FED_DETAIL_MONTHLYVEHIUSE_REPORT>> GetDetailMonthlyVehiUsageAsync(FEDParameterModel request)
         {
-            var result = await _oracleContext
+            try
+            {
+                var result = await _oracleContext
                    .Set<FED_DETAIL_MONTHLYVEHIUSE_REPORT>()
                    .FromSqlRaw(@"
                             BEGIN 
@@ -280,10 +280,16 @@ namespace EXAT.ECM.FED.API.Services
                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
                    new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
                    new OracleParameter("p_DATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
-           )
-               .ToListAsync(); // ✅ คืนค่าเป็น List<FED_HEADER_DAILYVEHIUSE_REPORT>
-            _logger.LogInformation("EER VEHICLE JSON: {result}", JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-            return result;
+                   )
+                       .ToListAsync(); // ✅ คืนค่าเป็น List<FED_HEADER_DAILYVEHIUSE_REPORT>
+                        _logger.LogInformation("EER VEHICLE JSON: {result}", JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            
         }
         public async Task<FED_HEADER_DriverUsageVehicle_REPORT> GetDriverUsageVehicleAsync(FEDParameterModel request)
         {

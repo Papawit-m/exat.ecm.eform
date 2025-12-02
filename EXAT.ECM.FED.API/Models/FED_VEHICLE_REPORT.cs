@@ -78,8 +78,8 @@ namespace EXAT.ECM.FED.API.Models
         public string? LICENSE_PLATE { get; set; }
         public string? MONTH_NAME { get; set; }
         public string? YEAR { get; set; }
+        //public FED_TOTAL_MONTHLYVEHIUSE_REPORT TOTAL { get; set; } = new FED_TOTAL_MONTHLYVEHIUSE_REPORT();
         public List<FED_DETAIL_MONTHLYVEHIUSE_REPORT> Detail { get; set; } = new List<FED_DETAIL_MONTHLYVEHIUSE_REPORT>();
-
     }
     public class FED_DETAIL_MONTHLYVEHIUSE_REPORT
     {
@@ -95,6 +95,16 @@ namespace EXAT.ECM.FED.API.Models
         public string? PRICE_PER_LITER { get; set; }
         public string? AMOUNT { get; set; }
         public string? REMARKS { get; set; }
+        public string? TOTAL_DIST_KM { get; set; }
+        public string? TOTAL_BENZ_LITER { get; set; }
+        public string? TOTAL_DIESEL_LITER { get; set; }
+        public string? TOTAL_LUBE_LITER { get; set; }
+        public string? TOTAL_AMT { get; set; }
+        public string? FUEL_EFF_KM_L { get; set; }
+        public string? LUBE_PER_L_MNT { get; set; }
+    }
+    public class FED_TOTAL_MONTHLYVEHIUSE_REPORT
+    {
         public string? TOTAL_DIST_KM { get; set; }
         public string? TOTAL_BENZ_LITER { get; set; }
         public string? TOTAL_DIESEL_LITER { get; set; }
