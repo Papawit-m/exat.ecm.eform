@@ -1,6 +1,7 @@
 ﻿using EXAT.ECM.EService.API.Services.Interfaces;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EXAT.ECM.EService.API.Middleware
 {
@@ -8,13 +9,12 @@ namespace EXAT.ECM.EService.API.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<HttpLoggingMiddleware> _logger;
-        private readonly IAccessSessionService _sessionService;
+        //private readonly IAccessSessionService _sessionService;
 
-        public HttpLoggingMiddleware(RequestDelegate next, ILogger<HttpLoggingMiddleware> logger, IAccessSessionService sessionService)
+        public HttpLoggingMiddleware(RequestDelegate next, ILogger<HttpLoggingMiddleware> logger)
         {
             _next = next;
             _logger = logger;
-            _sessionService = sessionService;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -31,15 +31,16 @@ namespace EXAT.ECM.EService.API.Middleware
             {
                 using var responseBody = new MemoryStream();
                 context.Response.Body = responseBody;
-
+                // ดึง IAccessSessionService จาก scope ของ request นี้
+                //var sessionService = context.RequestServices.GetRequiredService<IAccessSessionService>();
                 // 3) ตรวจสอบ Token / Device ก่อนจะไปต่อใน pipeline
-                var validationPassed = await ValidateAccessAsync(context);
+                //var validationPassed = await ValidateAccessAsync(context, sessionService);
 
-                if (validationPassed)
-                {
+                //if (validationPassed)
+                //{
                     // ผ่านเงื่อนไข → เข้าสู่ middleware / endpoint ถัดไป
                     await _next(context);
-                }
+                //}
                 // ถ้าไม่ผ่าน เราก็ตั้ง StatusCode + เขียนข้อความตอบกลับใน ValidateAccessAsync แล้ว
 
                 // 4) Log Response
@@ -57,82 +58,82 @@ namespace EXAT.ECM.EService.API.Middleware
         /// <summary>
         /// ตรวจสอบสิทธิ์จาก Token + DeviceId
         /// </summary>
-        private async Task<bool> ValidateAccessAsync(HttpContext context)
-        {
-            var request = context.Request;
+        //private async Task<bool> ValidateAccessAsync(HttpContext context, IAccessSessionService sessionService)
+        //{
+        //    var request = context.Request;
 
-            // -------------------------
-            // 1) ดึง Token จาก Query
-            // -------------------------
-            string token = request.Query["token"].ToString();
-            if (string.IsNullOrEmpty(token))
-                token = request.Query["accessToken"].ToString();
+        //    // -------------------------
+        //    // 1) ดึง Token จาก Query
+        //    // -------------------------
+        //    string token = request.Query["token"].ToString();
+        //    if (string.IsNullOrEmpty(token))
+        //        token = request.Query["accessToken"].ToString();
 
-            // -------------------------
-            // 2) ดึง Token จาก Route
-            // -------------------------
-            if (string.IsNullOrEmpty(token))
-            {
-                if (request.RouteValues.TryGetValue("token", out var routeToken))
-                {
-                    token = routeToken?.ToString();
-                }
-                else if (request.RouteValues.TryGetValue("accessToken", out var routeAToken))
-                {
-                    token = routeAToken?.ToString();
-                }
-            }
+        //    // -------------------------
+        //    // 2) ดึง Token จาก Route
+        //    // -------------------------
+        //    if (string.IsNullOrEmpty(token))
+        //    {
+        //        if (request.RouteValues.TryGetValue("token", out var routeToken))
+        //        {
+        //            token = routeToken?.ToString();
+        //        }
+        //        else if (request.RouteValues.TryGetValue("accessToken", out var routeAToken))
+        //        {
+        //            token = routeAToken?.ToString();
+        //        }
+        //    }
 
-            // -------------------------
-            // 3) ดึง Token จาก Header
-            // -------------------------
-            if (string.IsNullOrEmpty(token))
-            {
-                token = request.Headers["X-Access-Token"];
-            }
+        //    // -------------------------
+        //    // 3) ดึง Token จาก Header
+        //    // -------------------------
+        //    if (string.IsNullOrEmpty(token))
+        //    {
+        //        token = request.Headers["X-Access-Token"];
+        //    }
 
-            // DeviceId รับจาก Header (ให้ client แนบมา)
-            string deviceId = request.Headers["X-Device-Id"];
+        //    // DeviceId รับจาก Header (ให้ client แนบมา)
+        //    string deviceId = request.Headers["X-Device-Id"];
 
-            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(deviceId))
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("Missing token or device id.");
-                _logger.LogWarning("Unauthorized: Missing token or device id. Path={Path}", request.Path);
-                return false;
-            }
+        //    if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(deviceId))
+        //    {
+        //        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        //        await context.Response.WriteAsync("Missing token or device id.");
+        //        _logger.LogWarning("Unauthorized: Missing token or device id. Path={Path}", request.Path);
+        //        return false;
+        //    }
+        //    var session = await sessionService.GetSessionAsync(token);
 
-            var session = await _sessionService.GetSessionAsync(token);
+        //    if (session == null || session.IS_ACTIVE == 0)
+        //    {
+        //        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        //        await context.Response.WriteAsync("Invalid or inactive token.");
+        //        _logger.LogWarning("Unauthorized: Invalid or inactive token. Token={Token}", token);
+        //        return false;
+        //    }
 
-            if (session == null || session.IS_ACTIVE == 0)
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("Invalid or inactive token.");
-                _logger.LogWarning("Unauthorized: Invalid or inactive token. Token={Token}", token);
-                return false;
-            }
+        //    // ถ้า DeviceId ใน session ยังว่าง → ผูกกับเครื่องแรกที่เข้ามา
+        //    if (string.IsNullOrEmpty(session.DEVICE_ID))
+        //    {
+        //        await sessionService.UpdateDeviceId(token, deviceId);
+        //        _logger.LogInformation("Bind token to first device. Token={Token}, DeviceId={DeviceId}", token, deviceId);
+        //    }
+        //    else if (!string.Equals(session.DEVICE_ID, deviceId, StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        // ถ้า DeviceId ไม่ตรง → ไม่อนุญาตให้ใช้ link นี้จากอีกเครื่อง
+        //        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        //        await context.Response.WriteAsync("This link is already used on another device.");
+        //        _logger.LogWarning(
+        //            "Forbidden: Token used from another device. Token={Token}, OriginalDevice={OriginalDevice}, CurrentDevice={CurrentDevice}",
+        //            token,
+        //            session.DEVICE_ID,
+        //            deviceId);
+        //        return false;
+        //    }
 
-            // ถ้า DeviceId ใน session ยังว่าง → ผูกกับเครื่องแรกที่เข้ามา
-            if (string.IsNullOrEmpty(session.DEVICE_ID))
-            {
-                await _sessionService.UpdateDeviceId(token, deviceId);
-                _logger.LogInformation("Bind token to first device. Token={Token}, DeviceId={DeviceId}", token, deviceId);
-            }
-            else if (!string.Equals(session.DEVICE_ID, deviceId, StringComparison.OrdinalIgnoreCase))
-            {
-                // ถ้า DeviceId ไม่ตรง → ไม่อนุญาตให้ใช้ link นี้จากอีกเครื่อง
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsync("This link is already used on another device.");
-                _logger.LogWarning(
-                    "Forbidden: Token used from another device. Token={Token}, OriginalDevice={OriginalDevice}, CurrentDevice={CurrentDevice}",
-                    token,
-                    session.DEVICE_ID,
-                    deviceId);
-                return false;
-            }
-
-            return true;
-        }
+        //    return true;
+        //}
+       
         private async Task LogRequest(HttpRequest request)
         {
             request.EnableBuffering();

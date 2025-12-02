@@ -666,9 +666,9 @@ namespace EXAT.ECM.FED.API.Controllers
             }
         }
         // GET: api/DownloadVehiUsageFED
-        [HttpGet("DownloadVehiUsageFED")]
-        [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
-        [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
+        //[HttpGet("DownloadVehiUsageFED")]
+        //[ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
+        //[ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
         
         //public async Task<IActionResult> DownloadVehiUsageFED(
         //                          [FromQuery] string? p_Parameter   //  Param ที่ใช้ใน store procedure, Concat param+val with | (pipe) ex. param1=aaa|param2=bbb
@@ -941,6 +941,7 @@ namespace EXAT.ECM.FED.API.Controllers
         
         
         // Get: api/ImportFleetCardFED
+        
         [HttpGet("ImportFleetCardFED")]
         [ProducesResponseType(typeof(ResponseModel.SuccessResponse), 200)]
         [ProducesResponseType(typeof(ResponseModel.ErrorResponse), 500)]
@@ -2628,13 +2629,13 @@ namespace EXAT.ECM.FED.API.Controllers
         [HttpPost("ImportTextBase64Async")]
         public async Task<ImportResult> ImportTextBase64Async(
             [FromQuery] string? p_Parameter,
-            [FromQuery] string? importBatchId = null,
-            [FromQuery] string? headerId = null,
-            [FromQuery] string templateName = null)
+            [FromQuery] string? p_importBatchId = null,
+            [FromQuery] string? p_headerId = null,
+            [FromQuery] string p_templateName = null)
         {
             var result = new ImportResult();
             string fileName ="";
-            templateName = templateName ?? "TEXT_TEMPLATE";
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
 
             try
             {
@@ -2722,10 +2723,10 @@ namespace EXAT.ECM.FED.API.Controllers
                     _progressTracking.InitializeProgress(progressId, totalRows);
 
                     // Start background processing
-                    var batchId = importBatchId ?? Guid.NewGuid().ToString();
+                    var batchId = p_importBatchId ?? Guid.NewGuid().ToString();
                     _ = Task.Run(async () =>
                     {
-                        await ProcessTextInBackgroundAsync(progressId, filePath, File.FILE_NAME, batchId, headerId, templateName);
+                        await ProcessTextInBackgroundAsync(progressId, filePath, File.FILE_NAME, batchId, p_headerId, p_templateName);
 
                         // Cleanup temp file
                         if (System.IO.File.Exists(filePath))
@@ -2744,7 +2745,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     result.TotalRows = totalRows.ToString();
                     result.FileName = File.FILE_NAME;
                     result.ImportBatchId = batchId;
-                    result.Headers = headerId;
+                    result.Headers = p_headerId;
                     result.Source = "base64";
 
                 }
@@ -2921,13 +2922,13 @@ namespace EXAT.ECM.FED.API.Controllers
         [HttpPost("ImportZipBase64Async")]
         public async Task<ImportResult> ImportZipBase64Async(
             [FromQuery] string? p_Parameter,
-            [FromQuery] string? importBatchId = null,
-            [FromQuery] string? headerId = null,
-            [FromQuery] string templateName = null)
+            [FromQuery] string? p_importBatchId = null,
+            [FromQuery] string? p_headerId = null,
+            [FromQuery] string p_templateName = null)
         {
             var result = new ImportResult();
             string fileName = "";
-            templateName = templateName ?? "TEXT_TEMPLATE";
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
 
             try
             {
@@ -3032,10 +3033,10 @@ namespace EXAT.ECM.FED.API.Controllers
                     _progressTracking.InitializeProgress(progressId, totalRows);
 
                     // Start background processing
-                    var batchId = importBatchId ?? $"ZIP_{DateTime.Now:yyyyMMddHHmmss}";
+                    var batchId = p_importBatchId ?? $"ZIP_{DateTime.Now:yyyyMMddHHmmss}";
                     _ = Task.Run(async () =>
                     {
-                        await ProcessZipInBackgroundAsync(progressId, textFiles, fileName, batchId, tempDir, headerId, templateName);
+                        await ProcessZipInBackgroundAsync(progressId, textFiles, fileName, batchId, tempDir, p_headerId, p_templateName);
                     });
 
                     result.Status = "S";
@@ -3045,7 +3046,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     result.FilesFound = textFiles.Length.ToString();
                     result.TotalRows = totalRows.ToString();
                     result.ImportBatchId = batchId;
-                    result.Headers = headerId;
+                    result.Headers = p_headerId;
                     result.FileDetails = fileDetails.ToString();
                 }
                 catch (Exception ex)
@@ -3076,13 +3077,13 @@ namespace EXAT.ECM.FED.API.Controllers
         [HttpPost("ImportTextToStaging")]
         public async Task<ImportResult> ImportTextToStaging(
             [FromQuery] string? p_Parameter,
-            [FromQuery] string? importBatchId = null,
-            [FromQuery] string? headerId = null,
-            [FromQuery] string templateName = null)
+            [FromQuery] string? p_importBatchId = null,
+            [FromQuery] string? p_headerId = null,
+            [FromQuery] string p_templateName = null)
         {
             var result = new ImportResult();
             string fileName = "";
-            templateName = templateName ?? "TEXT_TEMPLATE";
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
 
             try
             {
@@ -3193,16 +3194,16 @@ namespace EXAT.ECM.FED.API.Controllers
                 };
 
                 // Insert
-                await _loggingService.LogInfoAsync($"TEXT import start: {actualFileName}", $"Batch={importBatchId ?? "(auto)"}; Path={filePath}; Rows={dataRows.Count}; Source={(isUploadedFile ? "uploaded" : "local")}; Template={templateName}");
+                await _loggingService.LogInfoAsync($"TEXT import start: {actualFileName}", $"Batch={p_importBatchId ?? "(auto)"}; Path={filePath}; Rows={dataRows.Count}; Source={(isUploadedFile ? "uploaded" : "local")}; Template={p_templateName}");
 
                 var resultInsertRow = await InsertRowsAsync(
                     tableName: "FLEET_CARD_TEMP_TRANS_TEXT",
                     headers: headers,
                     rows: dataRows,
-                    importBatchId: string.IsNullOrWhiteSpace(importBatchId) ? Guid.NewGuid().ToString() : importBatchId!,
+                    importBatchId: string.IsNullOrWhiteSpace(p_importBatchId) ? Guid.NewGuid().ToString() : p_importBatchId!,
                     fileMeta: meta,
-                    headerId: headerId,
-                    templateName: templateName
+                    headerId: p_headerId,
+                    templateName: p_templateName
                 );
 
                 await _loggingService.LogInfoAsync($"TEXT import complete: {actualFileName}", $"Batch={resultInsertRow.importBatchId}; Inserted={resultInsertRow.inserted}; Failed={resultInsertRow.failed}");
@@ -3234,7 +3235,7 @@ namespace EXAT.ECM.FED.API.Controllers
             }
             catch (Exception ex)
             {
-                await _loggingService.LogErrorAsync("ERROR", ex, "TEXT import failed", $"File={fileName}; Batch={importBatchId}");
+                await _loggingService.LogErrorAsync("ERROR", ex, "TEXT import failed", $"File={fileName}; Batch={p_importBatchId}");
                 result.Status = "E";
                 result.Message = ex.Message;
                 result.Data = ex.StackTrace;
