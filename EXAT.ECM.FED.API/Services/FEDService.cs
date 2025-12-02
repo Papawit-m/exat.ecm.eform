@@ -1042,6 +1042,13 @@ namespace EXAT.ECM.FED.API.Services
         {
             try
             {
+                var dateFrom = string.IsNullOrEmpty(request.p_DATE_FROM)
+                ? (object)DBNull.Value
+                : DateTime.ParseExact(request.p_DATE_FROM, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+
+                var dateTo = string.IsNullOrEmpty(request.p_DATE_TO)
+                    ? (object)DBNull.Value
+                    : DateTime.ParseExact(request.p_DATE_TO, "dd-MM-yyyy", CultureInfo.InvariantCulture);
                 var result = await _oracleContext
                    .Set<FED_DETAIL_FUEL_FLEET_CARD_BANK>()
                   .FromSqlRaw(@"
@@ -1053,8 +1060,6 @@ namespace EXAT.ECM.FED.API.Services
                                             :p_YEAR,
                                             :p_DATE_FROM,
                                             :p_DATE_TO,
-                                            :p_HEADER_ID,
-                                            :p_CATEGORY_ID,
 	                                        :p_OUTDATA
                                         );
                                     END;",
@@ -1062,8 +1067,8 @@ namespace EXAT.ECM.FED.API.Services
                    new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID?? (object)DBNull.Value),
                    new OracleParameter("p_MONTH_NO", request.p_MONTH_NO?? (object)DBNull.Value),
                    new OracleParameter("p_YEAR", request.p_YEAR?? (object)DBNull.Value),
-                   new OracleParameter("p_DATE_FROM", request.p_DATE_FROM?? (object)DBNull.Value),
-                   new OracleParameter("p_DATE_TO", request.p_DATE_TO ?? (object)DBNull.Value),
+                   new OracleParameter("p_DATE_FROM", OracleDbType.Date) { Value = dateFrom },
+                   new OracleParameter("p_DATE_TO", OracleDbType.Date){ Value = dateTo },
                    new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
                )
                .ToListAsync();

@@ -197,17 +197,24 @@ namespace EXAT.ECM.FED.API.Controllers
                 FEDParameterModel request = new FEDParameterModel();
                 #region set parameter
                 string[] splitParam = new string[0];
-                p_Parameter = HttpUtility.UrlDecode(p_Parameter);
+                //// OLD 
+                //if (!string.IsNullOrEmpty(p_Parameter))
+                //    splitParam = p_Parameter.Split(new Char[] { '|' });
+                // LOGIC FIRST
                 if (!string.IsNullOrEmpty(p_Parameter))
-                    splitParam = p_Parameter.Split(new Char[] { '|' });
-
+                    splitParam = p_Parameter.Split(new Char[] { '=' });
+                    if (splitParam.Length == 2)
+                    {
+                        p_Parameter = HttpUtility.UrlDecode(splitParam[1]);
+                        splitParam = p_Parameter.Split(new Char[] { '|' });
+                }
                 foreach (string paramItem in splitParam)
                 {
                     _logger.LogInformation($"paramItem {paramItem} ");
                     string[] paramVal = paramItem.Split('=');
 
                     if (paramVal != null && paramVal.Length == 2)
-                    {
+                    {   
                         switch (paramVal[0])
                         {
                             case "p_HEADER_ID": request.p_HEADER_ID = string.IsNullOrEmpty(paramVal[1]) ? null : Utilities.CleansingData(paramVal[1]); break;
@@ -461,7 +468,6 @@ namespace EXAT.ECM.FED.API.Controllers
                     var data = _fedService.GetFuelFleetCardBank(request);
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
                     var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
-
                     replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                     replacWords.ReplaceNodeText(document, d_header);
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
