@@ -28,6 +28,7 @@ using Aspose.Pdf.Operators;
 using Aspose.Words.Bibliography;
 using Aspose.Pdf.AI;
 using System.Web;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 namespace EXAT.ECM.FED.API.Controllers
 {
     [ApiController]
@@ -1211,7 +1212,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     configs.Add(row);
                 }
 
-                logMessage = $"SUCCESS: Get {configs.Count} rows from FLEET_CARD_IMPORT_CONFIGS";
+                logMessage = $"SUCCESS: Get {configs.Count} rows from EFM_FED.FLEET_CARD_IMPORT_CONFIGS";
             }
             catch (Exception ex)
             {
@@ -1322,7 +1323,11 @@ namespace EXAT.ECM.FED.API.Controllers
 
             try
             {
-                using var connection = await _oracleContext.GetOpenConnectionAsync();
+                using var connection = new OracleConnection(_connectionString);
+                if (connection.State != ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
                 using var cmd = connection.CreateCommand();
                 cmd.CommandText = @"
                     SELECT 
@@ -1330,7 +1335,7 @@ namespace EXAT.ECM.FED.API.Controllers
                         SOURCE_COLUMN_NAME, 
                         SOURCE_COLUMN_INDEX,
                         IS_REQUIRED 
-                    FROM FLEET_CARD_IMPORT_CONFIGS
+                    FROM EFM_FED.FLEET_CARD_IMPORT_CONFIGS
                     WHERE TEMPLATE_NAME = :templateName
                     ORDER BY CONFIG_ID";
 
@@ -1610,7 +1615,7 @@ namespace EXAT.ECM.FED.API.Controllers
                                 try
                                 {
                                     var (inserted, failed, batchErrors) = await batchInsert.InsertBatchAsync(
-                                        "FLEET_CARD_TEMP_TRANS_TEXT",
+                                        "EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT",
                                         headers,
                                         batch,
                                         importBatchId,
@@ -1644,7 +1649,7 @@ namespace EXAT.ECM.FED.API.Controllers
                             try
                             {
                                 var (inserted, failed, batchErrors) = await batchInsert.InsertBatchAsync(
-                                    "FLEET_CARD_TEMP_TRANS_TEXT",
+                                    "EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT",
                                     headers,
                                     batch,
                                     importBatchId,
@@ -1762,7 +1767,7 @@ namespace EXAT.ECM.FED.API.Controllers
                         try
                         {
                             var (batchInserted, batchFailed, batchErrors) = await _batchInsert.InsertBatchAsync(
-                                "FLEET_CARD_TEMP_TRANS_TEXT",
+                                "EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT",
                                 headers,
                                 batch,
                                 importBatchId ?? $"BATCH_{DateTime.Now:yyyyMMddHHmmss}",
@@ -1798,7 +1803,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     try
                     {
                         var (batchInserted2, batchFailed2, batchErrors2) = await _batchInsert.InsertBatchAsync(
-                            "FLEET_CARD_TEMP_TRANS_TEXT",
+                            "EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT",
                             headers,
                             batch,
                             importBatchId ?? $"BATCH_{DateTime.Now:yyyyMMddHHmmss}",
@@ -1902,8 +1907,12 @@ namespace EXAT.ECM.FED.API.Controllers
             string? headerId = null,
             string templateName = "TEXT_TEMPLATE")
         {
-            using var conn = await _oracleContext.GetOpenConnectionAsync();
+            using var conn = new OracleConnection(_connectionString);
 
+            if (conn.State != ConnectionState.Open)
+            {
+                await conn.OpenAsync();
+            }
             // Load template config
             var templateConfigs = await LoadTemplateConfigAsync(templateName);
             if (templateConfigs.Count == 0)
@@ -3225,7 +3234,7 @@ namespace EXAT.ECM.FED.API.Controllers
                 await _loggingService.LogInfoAsync($"TEXT import start: {actualFileName}", $"Batch={p_importBatchId ?? "(auto)"}; Path={filePath}; Rows={dataRows.Count}; Source={(isUploadedFile ? "uploaded" : "local")}; Template={p_templateName}");
 
                 var resultInsertRow = await InsertRowsAsync(
-                    tableName: "FLEET_CARD_TEMP_TRANS_TEXT",
+                    tableName: "EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT",
                     headers: headers,
                     rows: dataRows,
                     importBatchId: string.IsNullOrWhiteSpace(p_importBatchId) ? Guid.NewGuid().ToString() : p_importBatchId!,
@@ -3237,7 +3246,7 @@ namespace EXAT.ECM.FED.API.Controllers
                 await _loggingService.LogInfoAsync($"TEXT import complete: {actualFileName}", $"Batch={resultInsertRow.importBatchId}; Inserted={resultInsertRow.inserted}; Failed={resultInsertRow.failed}");
 
                 result.Status = "S";
-                result.Message = "FLEET_CARD_TEMP_TRANS_TEXT";
+                result.Message = "EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT";
                 result.FileName = meta.FileName;
                 result.ImportBatchId = resultInsertRow.importBatchId;
                 result.Headers = resultInsertRow.headerId;
@@ -3291,7 +3300,13 @@ namespace EXAT.ECM.FED.API.Controllers
                     return BadRequest(new { success = false, message = "batchId or headerId parameter is required" });
                 }
 
-                using var conn = await _oracleContext.GetOpenConnectionAsync();
+                using var conn = new OracleConnection(_connectionString);
+
+                if (conn.State != ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
                 using var cmd = conn.CreateCommand();
 
                 var whereConditions = new List<string>();
@@ -3309,7 +3324,7 @@ namespace EXAT.ECM.FED.API.Controllers
                         MIN(IMPORT_DATE) AS IMPORT_DATE,
                         PROCESSING_STATUS,
                         COUNT(*) AS RECORD_COUNT
-                    FROM FLEET_CARD_TEMP_TRANS_TEXT
+                    FROM EFM_FED.FLEET_CARD_TEMP_TRANS_TEXT
                     WHERE {string.Join(" AND ", whereConditions)}
                     GROUP BY IMPORT_BATCH_ID, HEADER_ID, PROCESSING_STATUS
                     ORDER BY PROCESSING_STATUS";
