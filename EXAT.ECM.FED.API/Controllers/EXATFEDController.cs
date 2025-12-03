@@ -560,13 +560,13 @@ namespace EXAT.ECM.FED.API.Controllers
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
                     document.Save(memoryStream, p_FileName);
                 }
-                #region VehicleInspectionDelivery บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ
 
-                if (p_Template == "VehicleInspectionDelivery1Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
+                #region VehicleInspectionDelivery บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ
+                if (p_Template == "VehicleInspectionDeliveryTemplate1") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
                 {
                     if (string.IsNullOrEmpty(p_FileName))
                     {
-                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery1Template");
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery1");
                     }
                     string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery1Template);
                     var apOption = new AsposeHelperOption(_asposeOption, _environment);
@@ -582,11 +582,11 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-                if (p_Template == "VehicleInspectionDelivery2Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
+                if (p_Template == "VehicleInspectionDeliveryTemplate2") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
                 {
                     if (string.IsNullOrEmpty(p_FileName))
                     {
-                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery2Template");
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery2");
                     }
                     string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery2Template);
                     var apOption = new AsposeHelperOption(_asposeOption, _environment);
@@ -602,11 +602,11 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-                if (p_Template == "VehicleInspectionDelivery3Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
+                if (p_Template == "VehicleInspectionDeliveryTemplate3") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(1)
                 {
                     if (string.IsNullOrEmpty(p_FileName))
                     {
-                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery3Template");
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery3");
                     }
                     string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery3Template);
                     var apOption = new AsposeHelperOption(_asposeOption, _environment);
@@ -622,11 +622,11 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-                if (p_Template == "VehicleInspectionDelivery4Template") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(4)
+                if (p_Template == "VehicleInspectionDeliveryTemplate4") // บันทึกการตรวจและส่งมอบรถพร้อมอุปกรณ์รถ(4)
                 {
                     if (string.IsNullOrEmpty(p_FileName))
                     {
-                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery4Template");
+                        p_FileName = string.Format("Export_{0}.Docx", "VehicleInspectionDelivery4");
                     }
                     string contentPath = string.Format("{0}/{1}", this._environment.ContentRootPath, VehicleInspectionDelivery4Template);
                     var apOption = new AsposeHelperOption(_asposeOption, _environment);
