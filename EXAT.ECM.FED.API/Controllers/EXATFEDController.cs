@@ -198,15 +198,10 @@ namespace EXAT.ECM.FED.API.Controllers
                 #region set parameter
                 string[] splitParam = new string[0];
                 //// OLD 
-                //if (!string.IsNullOrEmpty(p_Parameter))
-                //    splitParam = p_Parameter.Split(new Char[] { '|' });
-                // LOGIC FIRST
                 if (!string.IsNullOrEmpty(p_Parameter))
-                    splitParam = p_Parameter.Split(new Char[] { '=' });
-                    if (splitParam.Length == 2)
-                    {
-                        p_Parameter = HttpUtility.UrlDecode(splitParam[1]);
-                        splitParam = p_Parameter.Split(new Char[] { '|' });
+                {
+                    p_Parameter = HttpUtility.UrlDecode(p_Parameter);
+                    splitParam = p_Parameter.Split(new Char[] { '|' });
                 }
                 foreach (string paramItem in splitParam)
                 {
@@ -412,7 +407,7 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     document.Save(memoryStream, p_FileName);
                 }
-                if (p_Template == "DailyVehiuseTemplate") //บันทึกการตรวจรถประจำวัน
+                if (p_Template == "DailyVehicleInspectionTemplate") //บันทึกการตรวจรถประจำวัน
                 {
                     if (string.IsNullOrEmpty(p_FileName))
                     {
