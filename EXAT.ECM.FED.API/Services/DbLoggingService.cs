@@ -12,11 +12,14 @@ namespace EXAT.ECM.FED.API.Services
     public class DbLoggingService : ILoggingService
     {
         private readonly OracleDbContext _db;
+        private readonly string _connectionString;
 
         // ปรับชื่อให้สื่อ และไม่ "await" DbContext
-        public DbLoggingService(OracleDbContext dbContext)
+        public DbLoggingService(OracleDbContext dbContext, IConfiguration configuration)
         {
-            _db = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _db = dbContext ;
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
         }
 
         // ============== Public APIs ==============

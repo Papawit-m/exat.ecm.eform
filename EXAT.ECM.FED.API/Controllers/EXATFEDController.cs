@@ -44,6 +44,7 @@ namespace EXAT.ECM.FED.API.Controllers
         private readonly IFleetCardRepository _repository;
         private readonly IBatchInsertService _batchInsert;
         private readonly IProgressTrackingService _progressTracking;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         private static readonly Dictionary<string, string> MonthAbbr = new()
         {
@@ -67,6 +68,7 @@ namespace EXAT.ECM.FED.API.Controllers
                                   , IProgressTrackingService progressTracking
                                   , IBatchInsertService batchInsert
                                   , OracleDbContext oracleContext
+                                  , IServiceScopeFactory scopeFactory
 
                                   )
         {
@@ -84,8 +86,9 @@ namespace EXAT.ECM.FED.API.Controllers
             _progressTracking = progressTracking;
             _batchInsert = batchInsert;
             _oracleContext = oracleContext;
-            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
-            //_connectionString = configuration.GetConnectionString("OracleConnection");
+            //_connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            _connectionString = configuration.GetConnectionString("OracleConnection");
+            _scopeFactory = scopeFactory;
         }
 
         private string VehicleRequestTemplate = "DocumentTemplate/FED/VehicleRequestTemplate.docx"; 
@@ -1540,79 +1543,111 @@ namespace EXAT.ECM.FED.API.Controllers
             }
         }
 
-        private async Task ProcessZipInBackgroundAsync(string progressId, string[] textFiles, string zipFileName, string importBatchId, string tempDir, string? headerId = null, string templateName = "TEXT_TEMPLATE")
+        private async Task ProcessZipInBackgroundAsync(string progressId, string[] textFiles, string zipFileName, string importBatchId, string tempDir, string? headerId , string templateName ,ILoggingService loggingService, IBatchInsertService batchInsert, IProgressTrackingService progressTracking)
         {
             try
             {
-                await _loggingService.LogInfoAsync("INFO", $"[{progressId}] ZIP import started: {zipFileName} ({textFiles.Length} files)");
+                    await loggingService.LogInfoAsync("INFO", $"[{progressId}] ZIP import started: {zipFileName} ({textFiles.Length} files)");
 
-                // Load template config
-                var templateConfigs = await LoadTemplateConfigAsync(templateName);
-                if (templateConfigs.Count == 0)
-                {
-                    _progressTracking.SetError(progressId, $"Template config '{templateName}' not found");
-                    await _loggingService.LogErrorAsync("ERROR", new Exception("Template config not found"), $"[{progressId}] Template config not found", templateName);
-                    return;
-                }
-
-                var encoding = Encoding.GetEncoding(874);
-                var totalProcessed = 0;
-                var totalInserted = 0;
-                var totalFailed = 0;
-                var allErrors = new List<object>();
-
-                foreach (var txtFilePath in textFiles)
-                {
-                    var fileName = Path.GetFileName(txtFilePath);
-                    await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Processing file: {fileName}");
-
-                    using var reader = new StreamReader(txtFilePath, encoding);
-                    var headerLine = await reader.ReadLineAsync();
-                    if (string.IsNullOrEmpty(headerLine))
+                    var templateConfigs = await LoadTemplateConfigAsync(templateName);
+                    if (templateConfigs.Count == 0)
                     {
-                        await _loggingService.LogInfoAsync("WARNING", $"[{progressId}] Empty file: {fileName}");
-                        continue;
+                        progressTracking.SetError(progressId, $"Template config '{templateName}' not found");
+                        await loggingService.LogErrorAsync("ERROR", new Exception("Template config not found"), $"[{progressId}] Template config not found", templateName);
+                        return;
                     }
 
-                    var headers = headerLine.Split('|').Select(h => h.Trim()).ToArray();
-                    var fileInfo = new FileInfo(txtFilePath);
-                    var fileMeta = new
+                    var encoding = Encoding.GetEncoding(874);
+                    var totalProcessed = 0;
+                    var totalInserted = 0;
+                    var totalFailed = 0;
+                    var allErrors = new List<object>();
+
+                    foreach (var txtFilePath in textFiles)
                     {
-                        FileName = fileName,
-                        FileSize = fileInfo.Length,
-                        CreatedDate = fileInfo.CreationTime,
-                        ModifiedDate = fileInfo.LastWriteTime
-                    };
+                        var fileName = Path.GetFileName(txtFilePath);
+                        await loggingService.LogInfoAsync("INFO", $"[{progressId}] Processing file: {fileName}");
 
-                    var batch = new List<string[]>(1000);
-                    var fileProcessed = 0;
-
-                    string? line;
-                    while ((line = await reader.ReadLineAsync()) != null)
-                    {
-                        if (string.IsNullOrWhiteSpace(line)) continue;
-
-                        var row = line.Split('|').Select(v => v.Trim()).ToArray();
-
-                        // Validate row ตาม config
-                        var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
-                        if (!isValid)
+                        using var reader = new StreamReader(txtFilePath, encoding);
+                        var headerLine = await reader.ReadLineAsync();
+                        if (string.IsNullOrEmpty(headerLine))
                         {
-                            allErrors.Add(new { file = fileName, row = fileProcessed + 1, error = validationError });
-                            fileProcessed++;
-                            totalProcessed++;
+                            await loggingService.LogInfoAsync("WARNING", $"[{progressId}] Empty file: {fileName}");
                             continue;
                         }
 
-                        batch.Add(row);
-                        fileProcessed++;
-                        totalProcessed++;
+                        var headers = headerLine.Split('|').Select(h => h.Trim()).ToArray();
+                        var fileInfo = new FileInfo(txtFilePath);
+                        var fileMeta = new
+                        {
+                            FileName = fileName,
+                            FileSize = fileInfo.Length,
+                            CreatedDate = fileInfo.CreationTime,
+                            ModifiedDate = fileInfo.LastWriteTime
+                        };
 
-                        if (batch.Count >= 1000)
+                        var batch = new List<string[]>(1000);
+                        var fileProcessed = 0;
+
+                        string? line;
+                        while ((line = await reader.ReadLineAsync()) != null)
+                        {
+                            if (string.IsNullOrWhiteSpace(line)) continue;
+
+                            var row = line.Split('|').Select(v => v.Trim()).ToArray();
+
+                            var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
+                            if (!isValid)
+                            {
+                                allErrors.Add(new { file = fileName, row = fileProcessed + 1, error = validationError });
+                                fileProcessed++;
+                                totalProcessed++;
+                                continue;
+                            }
+
+                            batch.Add(row);
+                            fileProcessed++;
+                            totalProcessed++;
+
+                            if (batch.Count >= 1000)
+                            {
+                                try
+                                {
+                                    var (inserted, failed, batchErrors) = await batchInsert.InsertBatchAsync(
+                                        "FLEET_CARD_TEMP_TRANS_TEXT",
+                                        headers,
+                                        batch,
+                                        importBatchId,
+                                        fileMeta,
+                                        (h, r) =>
+                                        {
+                                            var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
+                                            if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
+                                                return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
+                                            return (true, null);
+                                        },
+                                        headerId,
+                                        templateName
+                                    );
+                                    totalInserted += inserted;
+                                    totalFailed += failed;
+                                    allErrors.AddRange(batchErrors);
+                                    progressTracking.UpdateProgress(progressId, totalProcessed);
+                                }
+                                catch (Exception ex)
+                                {
+                                    await loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Batch insert failed - {fileName}");
+                                    allErrors.Add(new { file = fileName, row = fileProcessed, error = ex.Message });
+                                }
+                                batch.Clear();
+                            }
+                        }
+
+                        if (batch.Count > 0)
                         {
                             try
                             {
-                                var (inserted, failed, batchErrors) = await _batchInsert.InsertBatchAsync(
+                                var (inserted, failed, batchErrors) = await batchInsert.InsertBatchAsync(
                                     "FLEET_CARD_TEMP_TRANS_TEXT",
                                     headers,
                                     batch,
@@ -1622,9 +1657,7 @@ namespace EXAT.ECM.FED.API.Controllers
                                     {
                                         var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
                                         if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
-                                        {
                                             return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
-                                        }
                                         return (true, null);
                                     },
                                     headerId,
@@ -1633,79 +1666,41 @@ namespace EXAT.ECM.FED.API.Controllers
                                 totalInserted += inserted;
                                 totalFailed += failed;
                                 allErrors.AddRange(batchErrors);
-                                _progressTracking.UpdateProgress(progressId, totalProcessed);
+                                progressTracking.UpdateProgress(progressId, totalProcessed);
                             }
                             catch (Exception ex)
                             {
-                                await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Batch insert failed - {fileName}");
-                                allErrors.Add(new { file = fileName, row = fileProcessed, error = ex.Message });
+                                await loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Final batch failed - {fileName}");
+                                allErrors.Add(new { file = fileName, error = ex.Message });
                             }
-                            batch.Clear();
                         }
+
+                        await loggingService.LogInfoAsync("INFO", $"[{progressId}] Completed file: {fileName} ({fileProcessed} rows)");
                     }
 
-                    // Insert remaining rows
-                    if (batch.Count > 0)
-                    {
-                        try
-                        {
-                            var (inserted, failed, batchErrors) = await _batchInsert.InsertBatchAsync(
-                                "FLEET_CARD_TEMP_TRANS_TEXT",
-                                headers,
-                                batch,
-                                importBatchId,
-                                fileMeta,
-                                (h, r) =>
-                                {
-                                    var cardNoIndex = Array.FindIndex(h, x => x.Equals("CARD_NO", StringComparison.OrdinalIgnoreCase));
-                                    if (cardNoIndex >= 0 && cardNoIndex < r.Length && r[cardNoIndex].Length > 50)
-                                    {
-                                        return (false, $"CARD_NO too long ({r[cardNoIndex].Length} chars)");
-                                    }
-                                    return (true, null);
-                                },
-                                headerId,
-                                templateName
-                            );
-                            totalInserted += inserted;
-                            totalFailed += failed;
-                            allErrors.AddRange(batchErrors);
-                            _progressTracking.UpdateProgress(progressId, totalProcessed);
-                        }
-                        catch (Exception ex)
-                        {
-                            await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] Final batch failed - {fileName}");
-                            allErrors.Add(new { file = fileName, error = ex.Message });
-                        }
-                    }
-
-                    await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Completed file: {fileName} ({fileProcessed} rows)");
-                }
-
-                _progressTracking.CompleteProgress(progressId, totalInserted, totalFailed, allErrors);
-                await _loggingService.LogInfoAsync("INFO", $"[{progressId}] ZIP import completed: {zipFileName} - {totalProcessed} rows processed");
-            }
-            catch (Exception ex)
-            {
-                await _loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] ProcessZipInBackgroundAsync failed");
-                _progressTracking.SetError(progressId, ex.Message);
-            }
-            finally
-            {
-                // Cleanup temp directory
-                try
-                {
-                    if (Directory.Exists(tempDir))
-                    {
-                        Directory.Delete(tempDir, true);
-                        await _loggingService.LogInfoAsync("INFO", $"[{progressId}] Temp directory cleaned up: {tempDir}");
-                    }
+                    progressTracking.CompleteProgress(progressId, totalInserted, totalFailed, allErrors);
+                    await loggingService.LogInfoAsync("INFO", $"[{progressId}] ZIP import completed: {zipFileName} - {totalProcessed} rows processed");
                 }
                 catch (Exception ex)
                 {
-                    await _loggingService.LogInfoAsync("WARNING", $"[{progressId}] Failed to cleanup temp directory: {ex.Message}");
+                    await loggingService.LogErrorAsync("ERROR", ex, $"[{progressId}] ProcessZipInBackgroundAsync failed");
+                    progressTracking.SetError(progressId, ex.Message);
                 }
-            }
+                finally
+                {
+                    try
+                    {
+                        if (Directory.Exists(tempDir))
+                        {
+                            Directory.Delete(tempDir, true);
+                            await loggingService.LogInfoAsync("INFO", $"[{progressId}] Temp directory cleaned up: {tempDir}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        await loggingService.LogInfoAsync("WARNING", $"[{progressId}] Failed to cleanup temp directory: {ex.Message}");
+                    }
+                }
         }
 
         private async Task ProcessTextInBackgroundAsync(string progressId, string filePath, string fileName, string? importBatchId, string? headerId = null, string templateName = "TEXT_TEMPLATE")
@@ -2867,7 +2862,24 @@ namespace EXAT.ECM.FED.API.Controllers
                     var batchId = importBatchId ?? $"ZIP_{DateTime.Now:yyyyMMddHHmmss}";
                     _ = Task.Run(async () =>
                     {
-                        await ProcessZipInBackgroundAsync(progressId, textFiles, zipFile.FileName, batchId, tempDir, headerId, templateName);
+                        using var scope = _scopeFactory.CreateScope();
+                        var loggingService = scope.ServiceProvider.GetRequiredService<ILoggingService>();
+                        var batchInsertService = scope.ServiceProvider.GetRequiredService<IBatchInsertService>();
+                        var progressTracking = scope.ServiceProvider.GetRequiredService<IProgressTrackingService>();
+
+                        await ProcessZipInBackgroundAsync(
+                                progressId,
+                                textFiles,
+                                zipFile.FileName,
+                                batchId,
+                                tempDir,
+                                headerId,
+                                templateName,
+                                loggingService: loggingService,
+                                batchInsert: batchInsertService,
+                                progressTracking: progressTracking
+                            );
+                        //await ProcessZipInBackgroundAsync(progressId, textFiles, zipFile.FileName, batchId, tempDir, headerId, templateName,loggingService: loggingService);
                     });
 
                     return Ok(new
@@ -3038,10 +3050,26 @@ namespace EXAT.ECM.FED.API.Controllers
 
                     // Start background processing
                     var batchId = p_importBatchId ?? $"ZIP_{DateTime.Now:yyyyMMddHHmmss}";
-                    _ = Task.Run(async () =>
-                    {
-                        await ProcessZipInBackgroundAsync(progressId, textFiles, fileName, batchId, tempDir, p_headerId, p_templateName);
-                    });
+                    
+                        using var scope = _scopeFactory.CreateScope();
+                        var loggingService = scope.ServiceProvider.GetRequiredService<ILoggingService>();
+                        var batchInsertService = scope.ServiceProvider.GetRequiredService<IBatchInsertService>();
+                        var progressTracking = scope.ServiceProvider.GetRequiredService<IProgressTrackingService>();
+
+                        //await ProcessZipInBackgroundAsync(progressId, textFiles, fileName, batchId, tempDir, p_headerId, p_templateName);
+                        await ProcessZipInBackgroundAsync(
+                                progressId,
+                                textFiles,
+                                fileName,
+                                batchId,
+                                tempDir,
+                                headerId: p_headerId,
+                                templateName: p_templateName,
+                                loggingService: loggingService,
+                                batchInsert: batchInsertService,
+                                progressTracking: progressTracking
+                            );
+                   
 
                     result.Status = "S";
                     result.Message = "ZIP import started";
