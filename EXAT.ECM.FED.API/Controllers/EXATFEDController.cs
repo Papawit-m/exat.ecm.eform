@@ -426,7 +426,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
 
                     replacWords.ReplaceNodeText(document, d_header);
-                  
+                    // part Checkbox
                     replacWords.SetCheckboxes(document, d_header);
 
                     document.Save(memoryStream, p_FileName);
@@ -447,6 +447,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
 
                     replacWords.ReplaceNodeText(document, d_header);
+                    // part Checkbox
                     replacWords.SetCheckboxes(document, d_header);
 
                     document.Save(memoryStream, p_FileName);

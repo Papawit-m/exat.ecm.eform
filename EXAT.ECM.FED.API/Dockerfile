@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender1 \
     libstdc++6 \
+
  && rm -rf /var/lib/apt/lists/*
 
 # ตั้งค่า Timezone เป็น Asia/Bangkok
@@ -54,6 +55,7 @@ COPY ["EXAT.ECM.FED.API/DocumentTemplate/Fonts/THSarabun Bold.ttf", "/app/Docume
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/Fonts/THSarabun BoldItalic.ttf", "/app/DocumentTemplate/Fonts/"]
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/Fonts/THSarabun Italic.ttf", "/app/DocumentTemplate/Fonts/"]
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/Fonts/THSarabun.ttf", "/app/DocumentTemplate/Fonts/"]
+COPY ["EXAT.ECM.FED.API/DocumentTemplate/Fonts/WINGDNG2.ttf", "/app/DocumentTemplate/Fonts/"]
 
 # TEMPLATE
 COPY ["EXAT.ECM.FED.API/DocumentTemplate/FED/VehicleRequestTemplate.docx", "/app/DocumentTemplate/FED/"]
