@@ -1,4 +1,5 @@
 ﻿using EXAT.ECM.FED.API.DAL;
+using EXAT.ECM.FED.API.Services.Interfaces;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
 
@@ -21,8 +22,9 @@ namespace EXAT.ECM.FED.API.Services
     {
         private readonly OracleDbContext _oracleContext;
         private readonly string _connectionString;
+        private readonly IConfigService _configService;
 
-        public BatchInsertService( OracleDbContext oracleContext)
+        public BatchInsertService( OracleDbContext oracleContext, IConfiguration configuration )
         {
             _oracleContext = oracleContext;
             _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
