@@ -249,31 +249,75 @@ namespace EXAT.ECM.FED.API.Helper
                 .GroupBy(x => x.Key)
                 .ToDictionary(g => g.Key, g => g.First().Value);
 
+            //foreach (StructuredDocumentTag sdt in doc.GetChildNodes(NodeType.StructuredDocumentTag, true))
+            //{
+            //    if (sdt.SdtType == SdtType.Checkbox)
+            //    {
+            //        string title = sdt.Title?.Trim();
+            //        if (!string.IsNullOrEmpty(title) && mergedHeader.ContainsKey(title))
+            //        {
+            //            var replaceObj = mergedHeader[title];
+            //            object value = replaceObj?.Value;
+
+            //            // ✅ รองรับค่าจาก DataTable (object, bool, string, int)
+            //            bool isChecked = false;
+            //            if (value != null)
+            //            {
+            //                string val = value.ToString().Trim().ToLower(); 
+            //                isChecked = val == "true" || val == "1" || val == "yes" || val == "y"; 
+            //            } 
+            //            sdt.Checked = isChecked;
+            //            Console.WriteLine($"✔ Checkbox '{title}' set to {isChecked}");
+            //        }
+            //    }
+            //}
+
+            #region CheckBox
+            var titleKeyMap = mergedHeader
+                .Where(k => k.Key.EndsWith("_HTML"))  
+                .ToDictionary(
+                    k => k.Key.Replace("_HTML", ""),  // SDT.Title (เช่น FLAG_RESCUE_VEH)
+                    k => k.Key                        // actualKey (เช่น FLAG_RESCUE_VEH_HTML)
+                );
+
             foreach (StructuredDocumentTag sdt in doc.GetChildNodes(NodeType.StructuredDocumentTag, true))
             {
                 if (sdt.SdtType == SdtType.Checkbox)
                 {
                     string title = sdt.Title?.Trim();
+                    if (string.IsNullOrEmpty(title))
+                        continue;
 
-                    if (!string.IsNullOrEmpty(title) && mergedHeader.ContainsKey(title))
+                    // ถ้ามี mapping → ใช้ actualKey, ถ้าไม่มีก็ใช้ title เดิม
+                    string actualKey = titleKeyMap.ContainsKey(title) ? titleKeyMap[title] : title;
+
+                    if (!mergedHeader.ContainsKey(actualKey))
+                        continue;
+
+                    object value = mergedHeader[actualKey]?.Value;
+
+                    bool isChecked = false;
+
+                    if (value != null)
                     {
-                        var replaceObj = mergedHeader[title];
-                        object value = replaceObj?.Value;
+                        string val = value.ToString().Trim().ToLower();
 
-                        // ✅ รองรับค่าจาก DataTable (object, bool, string, int)
-                        bool isChecked = false;
-                        if (value != null)
+                        if (val == "&#9745;" || val == "true" || val == "1" || val == "yes" || val == "y")
                         {
-                            string val = value.ToString().Trim().ToLower();
-
-                            isChecked = val == "true" || val == "1" || val == "yes" || val == "y";
+                            isChecked = true;
                         }
-
-                        sdt.Checked = isChecked;
-                        Console.WriteLine($"✔ Checkbox '{title}' set to {isChecked}");
+                        else
+                        {
+                            isChecked = false;
+                        }
                     }
+
+                    sdt.Checked = isChecked;
+
+                    Console.WriteLine($"✔ Checkbox '{title}' (mapped to '{actualKey}') set to {isChecked}");
                 }
             }
+            #endregion
         }
         private DataTable ToDataTable<T>(T item)
         {
