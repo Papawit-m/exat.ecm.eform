@@ -86,8 +86,8 @@ namespace EXAT.ECM.FED.API.Controllers
             _progressTracking = progressTracking;
             _batchInsert = batchInsert;
             _oracleContext = oracleContext;
-            //_connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
-            _connectionString = configuration.GetConnectionString("OracleConnection");
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
             _scopeFactory = scopeFactory;
         }
 
