@@ -12,6 +12,7 @@ using System.Net.NetworkInformation;
 using System.Net.Mail;
 using EXAT.ECM.EService.API.DAL;
 using EXAT.ECM.EService.API.Services.Mappers;
+using System.Runtime;
 
 namespace EXAT.ECM.EService.API.Controllers
 {
@@ -22,24 +23,30 @@ namespace EXAT.ECM.EService.API.Controllers
         private readonly IExatApiService _exatApiService;
         private readonly ILogger<AuthenticationController> _logger;
         private readonly ExatApiSettings _exatSettings;
+        private readonly TFMNotiSettings _TFNSettings;
         private readonly ISessionService _sessionService;
         private readonly IOracleLoggerService _oracleLogger;
+        private readonly INotificationService _notificationService;
         //private readonly HttpContext httpContext;
 
         public AuthenticationController(
             IExatApiService exatApiService,
             ILogger<AuthenticationController> logger,
             IOptions<ExatApiSettings> exatSettings,
+            IOptions<TFMNotiSettings> tfnSettings,
             ISessionService sessionService, 
             OracleDbContext oracleContext,
-            IOracleLoggerService oracleLogger
+            IOracleLoggerService oracleLogger,
+            INotificationService notificationService
             )
         {
             _exatApiService = exatApiService;
             _sessionService = sessionService;
             _exatSettings = exatSettings.Value;
+            _TFNSettings = tfnSettings.Value;
             _logger = logger;
             _oracleLogger = oracleLogger;
+            _notificationService = notificationService;
         }
 
         [HttpPost("access-token")]
@@ -714,6 +721,165 @@ namespace EXAT.ECM.EService.API.Controllers
                     message = errorResponse.Message
                 });
             }
+        }
+
+        [HttpPost("TFNInsert")]
+        [ProducesResponseType(typeof(TFNNotiResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> InsertNotification
+            ( [FromQuery] string? p_HIGHWAY_ID
+            , [FromQuery] string? p_TITLE
+            , [FromQuery] string? p_MESSAGE
+            , [FromQuery] string? p_START_DATE
+            , [FromQuery] string? p_END_DATE
+            , [FromQuery] string? p_START_TIME
+            , [FromQuery] string? p_END_TIME
+            , [FromQuery] string? p_LINK
+            , [FromQuery] string? p_SCHEDULE_DATE
+            , [FromQuery] string? p_SCHEDULE_TIME
+            , [FromQuery] string? p_REGISTER_DATE
+            , [FromQuery] string? p_REGISTER_BY
+            , [FromQuery] string? p_TOKEN
+            )
+        {
+            var request = new TFNNotiRequest
+            { 
+                HIGHWAY_ID = p_HIGHWAY_ID
+                ,TITLE = p_TITLE
+                ,MESSAGE = p_MESSAGE
+                ,START_DATE = p_START_DATE
+                ,END_DATE = p_END_DATE
+                ,START_TIME = p_START_TIME
+                ,END_TIME = p_END_TIME
+                ,LINK = p_LINK
+                ,SCHEDULE_DATE = p_SCHEDULE_DATE
+                ,SCHEDULE_TIME = p_SCHEDULE_TIME
+                ,REGISTER_DATE = p_REGISTER_DATE
+                ,REGISTER_BY = p_REGISTER_BY
+                ,TOKEN = string.IsNullOrEmpty(p_TOKEN) ? _TFNSettings.Token : p_TOKEN
+            };
+            try
+            {
+                if (request == null)
+                    return BadRequest("Request cannot be null");
+
+                var result = await _notificationService.InsertNotiAsync(request);
+
+                // สมมติว่าถ้า STATUS_CODE = "200" คือสำเร็จ
+                if (result.StatusCode == 201)
+                {
+                    return Ok(new {
+                        statusCode = result.StatusCode
+                      , message = result.Message
+                      , noti_id = result.NotiId                                    
+                    });
+                }
+
+                // เผื่ออยาก log กรณี status code อื่น
+                _logger.LogWarning("insert_noti returned non-200 status_code: {StatusCode}, message={Message}",
+                    result.StatusCode, result.Message);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, result.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling insert_noti");
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+            }
+        }
+
+        [HttpPost("TFNUpdate")]
+        [ProducesResponseType(typeof(TFNNotiResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateNotification(
+              [FromQuery] int notiId
+            , [FromQuery] string? p_HIGHWAY_ID
+            , [FromQuery] string? p_TITLE
+            , [FromQuery] string? p_MESSAGE
+            , [FromQuery] string? p_START_DATE
+            , [FromQuery] string? p_END_DATE
+            , [FromQuery] string? p_START_TIME
+            , [FromQuery] string? p_END_TIME
+            , [FromQuery] string? p_LINK
+            , [FromQuery] string? p_SCHEDULE_DATE
+            , [FromQuery] string? p_SCHEDULE_TIME
+            , [FromQuery] string? p_REGISTER_DATE
+            , [FromQuery] string? p_REGISTER_BY
+            , [FromQuery] string? p_TOKEN)
+        {
+            if (notiId == null)
+                return BadRequest("Request cannot be null");
+            var request = new TFNNotiRequest
+            {
+                HIGHWAY_ID = p_HIGHWAY_ID
+               ,TITLE = p_TITLE
+               ,MESSAGE = p_MESSAGE
+               ,START_DATE = p_START_DATE
+               ,END_DATE = p_END_DATE
+               ,START_TIME = p_START_TIME
+               ,END_TIME = p_END_TIME
+               ,LINK = p_LINK
+               ,SCHEDULE_DATE = p_SCHEDULE_DATE
+               ,SCHEDULE_TIME = p_SCHEDULE_TIME
+               ,REGISTER_DATE = p_REGISTER_DATE
+               ,REGISTER_BY = p_REGISTER_BY
+               ,TOKEN = string.IsNullOrEmpty(p_TOKEN) ? _TFNSettings.Token : p_TOKEN
+            };
+
+            var result = await _notificationService.UpdateNotiAsync(notiId, request);
+
+            // ตามสเปกเดิม STATUS_CODE / message / NOTI_ID
+            if (result.StatusCode == 203)
+                return Ok(new
+                {
+                    statusCode = result.StatusCode
+                   ,message = result.Message
+                   ,noti_id = notiId
+                });
+
+            // เผื่อ STATUS_CODE อื่น
+            _logger.LogWarning("update_noti returned status_code: {StatusCode}, message={Message}",
+                result.StatusCode, result.Message);
+
+            return StatusCode(StatusCodes.Status500InternalServerError, result);
+        }
+
+        [HttpPost("TFNUpdateStatus")]
+        [ProducesResponseType(typeof(TFNNotiResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateNotificationStatus([FromQuery] int p_notiId
+            , [FromQuery] string? p_STATUS
+            , [FromQuery] string? p_APPROVE_DATE
+            , [FromQuery] string? p_APPROVE_BY
+            , [FromQuery] string? p_LINK
+            , [FromQuery] string? p_TOKEN
+            )
+        {
+            var request = new TFNNotiRequest
+            {
+                NOTI_ID = p_notiId,
+                STATUS  = p_STATUS,
+                APPROVE_DATE = p_APPROVE_DATE,
+                APPROVE_BY = p_APPROVE_BY,
+                LINK = p_LINK,
+                TOKEN = string.IsNullOrEmpty(p_TOKEN) ? _TFNSettings.Token : p_TOKEN
+            };
+
+            if (request == null)
+                return BadRequest("Request cannot be null");
+
+            var result = await _notificationService.UpdateStatusAsync(p_notiId, request);
+
+            if (result.StatusCode == 203)
+                return Ok(new
+                {
+                    statusCode = result.StatusCode
+                   ,message = result.Message
+                   ,noti_id = p_notiId
+                });
+
+            _logger.LogWarning("update_status returned status_code: {StatusCode}, message={Message}",
+                result.StatusCode, result.Message);
+
+            return StatusCode(StatusCodes.Status500InternalServerError, result);
         }
 
     }

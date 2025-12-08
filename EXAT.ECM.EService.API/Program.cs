@@ -5,6 +5,7 @@ using EXAT.ECM.EService.API.Model.Configuration;
 using EXAT.ECM.EService.API.Services.Implementations;
 using EXAT.ECM.EService.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,12 +54,21 @@ builder.Services.AddSingleton<IEncryptionService>(provider =>
 
 builder.Services.AddSingleton<ISessionService, SessionService>();
 
-builder.Services.AddDbContext<OracleDbContext>(options =>
-    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
-
 //builder.Services.AddDbContext<OracleDbContext>(options =>
-//        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
 
+builder.Services.AddDbContext<OracleDbContext>(options =>
+        options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+
+builder.Services.Configure<TFMNotiSettings>(builder.Configuration.GetSection("TFMNoti"));
+
+builder.Services.AddHttpClient<INotificationService, NotificationService>((sp, client) =>
+{
+    var settings = sp.GetRequiredService<IOptions<TFMNotiSettings>>().Value;
+
+    client.BaseAddress = new Uri(settings.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+});
 // Add HttpClient for EXAT API service with logging
 
 builder.Services.AddHttpClient<IExatApiService, ExatApiService>(client =>
