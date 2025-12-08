@@ -1314,6 +1314,35 @@ namespace EXAT.ECM.FED.API.Controllers
 
         // Section New Import Bank Feed Crad TxT
 
+        /// โหลด Delimiter จาก FLEET_CARD_TEMPLATE_NAME
+        /// </summary>
+        private async Task<string> LoadTemplateDelimiterAsync(string templateName)
+        {
+            try
+            {
+                using var connection = new OracleConnection(_connectionString);
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT DELIMITER
+                    FROM FLEET_CARD_TEMPLATE_NAME
+                    WHERE TEMPLATE_NAME = :templateName
+                    AND IS_ACTIVE = 1";
+
+                var param = cmd.CreateParameter();
+                param.ParameterName = "templateName";
+                param.Value = templateName;
+                cmd.Parameters.Add(param);
+
+                var result = await cmd.ExecuteScalarAsync();
+                return result?.ToString() ?? "|"; // Default to pipe if not found
+            }
+            catch (Exception ex)
+            {
+                await _loggingService.LogErrorAsync("ERROR", ex, "Failed to load delimiter", $"Template: {templateName}");
+                return "|"; // Default to pipe on error
+            }
+        }
+
         /// <summary>
         /// โหลด Template Config จาก FLEET_CARD_IMPORT_CONFIGS
         /// </summary>
@@ -1334,7 +1363,9 @@ namespace EXAT.ECM.FED.API.Controllers
                         FIELD_NAME, 
                         SOURCE_COLUMN_NAME, 
                         SOURCE_COLUMN_INDEX,
-                        IS_REQUIRED 
+                        IS_REQUIRED,
+                        FORMAT_DATE,
+                        YEAR_TYPE
                     FROM EFM_FED.FLEET_CARD_IMPORT_CONFIGS
                     WHERE TEMPLATE_NAME = :templateName
                     ORDER BY CONFIG_ID";
@@ -1352,7 +1383,9 @@ namespace EXAT.ECM.FED.API.Controllers
                         FieldName = reader.GetString(0),
                         SourceColumnName = reader.IsDBNull(1) ? null : reader.GetString(1),
                         SourceColumnIndex = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2),
-                        IsRequired = reader.GetInt32(3) == 1
+                        IsRequired = reader.GetInt32(3) == 1,
+                        FormatDate = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        YearType = reader.IsDBNull(5) ? null : reader.GetString(5)
                     });
                 }
             }
@@ -1421,10 +1454,12 @@ namespace EXAT.ECM.FED.API.Controllers
             public string? SourceColumnName { get; set; }
             public int? SourceColumnIndex { get; set; }
             public bool IsRequired { get; set; }
+            public string? FormatDate { get; set; }
+            public string? YearType { get; set; }
         }
 
 
-        private async Task<ImportResult> ReadTextFileInternal(string? fileName, string? p_Parameter)
+        private async Task<ImportResult> ReadTextFileInternal(string? fileName, string? p_Parameter, string templateName)
         {
             var result = new ImportResult();
             try
@@ -1485,6 +1520,9 @@ namespace EXAT.ECM.FED.API.Controllers
                 var lines = await System.IO.File.ReadAllLinesAsync(filePath, encoding);
                 var records = new List<Dictionary<string, string>>();
 
+                // โหลด delimiter จาก template
+                var delimiter = await LoadTemplateDelimiterAsync(templateName);
+
                 if (lines.Length == 0)
                 {
                     result.Status = "S";
@@ -1495,12 +1533,12 @@ namespace EXAT.ECM.FED.API.Controllers
                 }
 
                 // อ่าน header จาก row แรก
-                var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                var headers = lines[0].Split(delimiter).Select(h => h.Trim()).ToArray();
 
                 // อ่านข้อมูลจาก row 2 เป็นต้นไป
                 for (int i = 1; i < lines.Length; i++)
                 {
-                    var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                    var values = lines[i].Split(delimiter).Select(v => v.Trim()).ToArray();
 
                     if (values.Length != headers.Length)
                     {
@@ -1564,7 +1602,10 @@ namespace EXAT.ECM.FED.API.Controllers
                     var totalFailed = 0;
                     var allErrors = new List<object>();
 
-                    foreach (var txtFilePath in textFiles)
+                    // โหลด delimiter จาก template
+                    var delimiter = await LoadTemplateDelimiterAsync(templateName);
+
+                foreach (var txtFilePath in textFiles)
                     {
                         var fileName = Path.GetFileName(txtFilePath);
                         await loggingService.LogInfoAsync("INFO", $"[{progressId}] Processing file: {fileName}");
@@ -1577,7 +1618,7 @@ namespace EXAT.ECM.FED.API.Controllers
                             continue;
                         }
 
-                        var headers = headerLine.Split('|').Select(h => h.Trim()).ToArray();
+                        var headers = headerLine.Split(delimiter).Select(h => h.Trim()).ToArray();
                         var fileInfo = new FileInfo(txtFilePath);
                         var fileMeta = new
                         {
@@ -1595,13 +1636,18 @@ namespace EXAT.ECM.FED.API.Controllers
                         {
                             if (string.IsNullOrWhiteSpace(line)) continue;
 
-                            var row = line.Split('|').Select(v => v.Trim()).ToArray();
+                            var row = line.Split(delimiter).Select(v => v.Trim()).ToArray();
 
                             var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
                             if (!isValid)
                             {
                                 allErrors.Add(new { file = fileName, row = fileProcessed + 1, error = validationError });
-                                fileProcessed++;
+                                await _loggingService.LogErrorAsync(
+                                    "ERROR",
+                                    new Exception(validationError ?? "Validation failed"),
+                                    "Validation failed",
+                                    $"File={fileName};Row={fileProcessed + 1};Template={templateName};Batch={importBatchId};ProgressId={progressId}");
+                            fileProcessed++;
                                 totalProcessed++;
                                 continue;
                             }
@@ -1721,6 +1767,9 @@ namespace EXAT.ECM.FED.API.Controllers
 
                 var encoding = Encoding.GetEncoding(874);
 
+                // โหลด delimiter จาก template
+                var delimiter = await LoadTemplateDelimiterAsync(templateName);
+
                 using var reader = new StreamReader(filePath, encoding);
                 var headerLine = await reader.ReadLineAsync();
                 if (string.IsNullOrEmpty(headerLine))
@@ -1729,7 +1778,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     return;
                 }
 
-                var headers = headerLine.Split('|').Select(h => h.Trim()).ToArray();
+                var headers = headerLine.Split(delimiter).Select(h => h.Trim()).ToArray();
                 var fileInfo = new FileInfo(filePath);
                 var fileMeta = new
                 {
@@ -1748,13 +1797,18 @@ namespace EXAT.ECM.FED.API.Controllers
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    var row = line.Split('|').Select(v => v.Trim()).ToArray();
+                    var row = line.Split(delimiter).Select(v => v.Trim()).ToArray();
 
                     // Validate row ตาม config
                     var (isValid, validationError) = ValidateRow(headers, row, templateConfigs);
                     if (!isValid)
                     {
                         errorList.Add(new { row = processedRows + 1, error = validationError });
+                        await _loggingService.LogErrorAsync(
+                            "ERROR",
+                            new Exception(validationError ?? "Validation failed"),
+                            "Validation failed",
+                            $"File={fileName};Row={processedRows + 1};Template={templateName};Batch={importBatchId};ProgressId={progressId}");
                         processedRows++;
                         continue;
                     }
@@ -2013,7 +2067,37 @@ namespace EXAT.ECM.FED.API.Controllers
                             // Use columnMapping to get file column index from FIELD_NAME
                             if (columnMapping.TryGetValue(col, out int idx))
                             {
-                                param.Value = idx < row.Length ? (object)row[idx] ?? DBNull.Value : DBNull.Value;
+                                var rawValue = idx < row.Length ? row[idx] : null;
+
+                                // Check if this field has date format config
+                                var fieldConfig = templateConfigs.FirstOrDefault(c =>
+                                    c.FieldName.Equals(col, StringComparison.OrdinalIgnoreCase));
+
+                                if (fieldConfig != null && !string.IsNullOrWhiteSpace(fieldConfig.FormatDate) && !string.IsNullOrWhiteSpace(rawValue))
+                                {
+                                    try
+                                    {
+                                        // Parse date according to FORMAT_DATE
+                                        var dateValue = DateTime.ParseExact(rawValue, fieldConfig.FormatDate, System.Globalization.CultureInfo.InvariantCulture);
+
+                                        // Convert BE (Buddhist Era) to AD (Christian Era)
+                                        if (fieldConfig.YearType?.Equals("BE", StringComparison.OrdinalIgnoreCase) == true)
+                                        {
+                                            dateValue = dateValue.AddYears(-543);
+                                        }
+
+                                        param.Value = dateValue;
+                                    }
+                                    catch
+                                    {
+                                        // If parsing fails, store as string
+                                        param.Value = (object)rawValue ?? DBNull.Value;
+                                    }
+                                }
+                                else
+                                {
+                                    param.Value = (object)rawValue ?? DBNull.Value;
+                                }
                             }
                             else
                             {
@@ -2035,6 +2119,12 @@ namespace EXAT.ECM.FED.API.Controllers
                     {
                         errors.Add(new { row = inserted + failed, error = ex.Message });
                     }
+                    await _loggingService.LogErrorAsync(
+                        "ERROR",
+                        new Exception(validationError ?? "Validation failed"),
+                        "Validation failed",
+                        $"File={fileMeta.FileName};Row={inserted + failed};Template={templateName};Batch={importBatchId};HeaderId={headerId ?? ""}");
+                    continue;
                 }
             }
 
@@ -2046,10 +2136,11 @@ namespace EXAT.ECM.FED.API.Controllers
         /// POST: api/TextFileReader/read (upload file via form-data)
         /// </summary>
         [HttpPost("ReadTextFile")]
-        public async Task<ImportResult> ReadTextFile([FromQuery] string? p_Parameter)
+        public async Task<ImportResult> ReadTextFile([FromQuery] string? p_Parameter, [FromQuery] string p_templateName = null)
         {
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
             //[FromForm] IFormFile? file
-            var result = await ReadTextFileInternal(null, p_Parameter);
+            var result = await ReadTextFileInternal(null, p_Parameter, p_templateName);
             return result;
         }
 
@@ -2060,9 +2151,9 @@ namespace EXAT.ECM.FED.API.Controllers
         /// <param name="base64File">Base64 encoded string ของไฟล์</param>
         /// <param name="fileName">ชื่อไฟล์ (ต้องลงท้ายด้วย .txt)</param>
         [HttpPost("ReadTextFileBase64")]
-        public async Task<ImportResult> ReadTextFileBase64([FromQuery] string? p_Parameter)
+        public async Task<ImportResult> ReadTextFileBase64([FromQuery] string? p_Parameter, [FromQuery] string p_templateName = null)
         {
-            
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
             var result = new ImportResult();
            
             try
@@ -2126,6 +2217,10 @@ namespace EXAT.ECM.FED.API.Controllers
 
                 var records = new List<Dictionary<string, string>>();
 
+                // โหลด delimiter จาก template
+                var delimiter = await LoadTemplateDelimiterAsync(p_templateName);
+
+
                 // อ่านไฟล์ด้วย Windows-874 (TIS-620) เพื่อรองรับภาษาไทย
                 var encoding = Encoding.GetEncoding(874);
                 var lines = await System.IO.File.ReadAllLinesAsync(filePath, encoding);
@@ -2140,12 +2235,12 @@ namespace EXAT.ECM.FED.API.Controllers
                 }
 
                 // อ่าน header จาก row แรก
-                var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                var headers = lines[0].Split(delimiter).Select(h => h.Trim()).ToArray();
 
                 // อ่านข้อมูลจาก row 2 เป็นต้นไป
                 for (int i = 1; i < lines.Length; i++)
                 {
-                    var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                    var values = lines[i].Split(delimiter).Select(v => v.Trim()).ToArray();
 
                     if (values.Length != headers.Length)
                     {
@@ -2194,8 +2289,10 @@ namespace EXAT.ECM.FED.API.Controllers
         /// POST: api/TextFileReader/read-zip (upload ZIP file via form-data)
         /// </summary>
         [HttpPost("read-zip")]
-        public async Task<IActionResult> ReadZipFile([FromForm] IFormFile? zipFile)
+        public async Task<IActionResult> ReadZipFile([FromForm] IFormFile? zipFile, [FromQuery] string p_templateName = null)
         {
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
+
             try
             {
                 if (zipFile == null || zipFile.Length == 0)
@@ -2236,6 +2333,9 @@ namespace EXAT.ECM.FED.API.Controllers
                     var encoding = Encoding.GetEncoding(874);
                     var allFilesData = new List<object>();
 
+                    // โหลด delimiter จาก template
+                    var delimiter = await LoadTemplateDelimiterAsync(p_templateName);
+
                     foreach (var txtFilePath in textFiles)
                     {
                         var fileName = Path.GetFileName(txtFilePath);
@@ -2254,12 +2354,12 @@ namespace EXAT.ECM.FED.API.Controllers
                             continue;
                         }
 
-                        var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                        var headers = lines[0].Split(delimiter).Select(h => h.Trim()).ToArray();
                         var records = new List<Dictionary<string, string>>();
 
                         for (int i = 1; i < lines.Length; i++)
                         {
-                            var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                            var values = lines[i].Split(delimiter).Select(v => v.Trim()).ToArray();
                             if (values.Length != headers.Length) continue;
 
                             var record = new Dictionary<string, string>();
@@ -2323,8 +2423,9 @@ namespace EXAT.ECM.FED.API.Controllers
         /// POST: api/TextFileReader/read-zip/base64
         /// </summary>
         [HttpPost("ReadZipFileBase64")]
-        public async Task<ImportResult> ReadZipFileBase64([FromQuery] string? p_Parameter)
+        public async Task<ImportResult> ReadZipFileBase64([FromQuery] string? p_Parameter, [FromQuery] string p_templateName = null)
         {
+            p_templateName = p_templateName ?? "TEXT_TEMPLATE";
             var result = new ImportResult();
             try
             {
@@ -2406,6 +2507,9 @@ namespace EXAT.ECM.FED.API.Controllers
                     var encoding = Encoding.GetEncoding(874);
                     var allFilesData = new List<object>();
 
+                    // โหลด delimiter จาก template
+                    var delimiter = await LoadTemplateDelimiterAsync(p_templateName);
+
                     foreach (var txtFilePath in textFiles)
                     {
                         var txtFileName = Path.GetFileName(txtFilePath);
@@ -2424,12 +2528,12 @@ namespace EXAT.ECM.FED.API.Controllers
                             continue;
                         }
 
-                        var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                        var headers = lines[0].Split(delimiter).Select(h => h.Trim()).ToArray();
                         var records = new List<Dictionary<string, string>>();
 
                         for (int i = 1; i < lines.Length; i++)
                         {
-                            var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                            var values = lines[i].Split(delimiter).Select(v => v.Trim()).ToArray();
                             if (values.Length != headers.Length) continue;
 
                             var record = new Dictionary<string, string>();
@@ -3201,6 +3305,10 @@ namespace EXAT.ECM.FED.API.Controllers
 
                 // Read file
                 var encoding = Encoding.GetEncoding(874);
+
+                // โหลด delimiter (default: TEXT_TEMPLATE)
+                var delimiter = await LoadTemplateDelimiterAsync(p_templateName);
+
                 var lines = await System.IO.File.ReadAllLinesAsync(filePath, encoding);
                 if (lines.Length <= 1)
                 {
@@ -3209,11 +3317,11 @@ namespace EXAT.ECM.FED.API.Controllers
                     return result;
                 }
 
-                var headers = lines[0].Split('|').Select(h => h.Trim()).ToArray();
+                var headers = lines[0].Split(delimiter).Select(h => h.Trim()).ToArray();
                 var dataRows = new List<string[]>();
                 for (int i = 1; i < lines.Length; i++)
                 {
-                    var values = lines[i].Split('|').Select(v => v.Trim()).ToArray();
+                    var values = lines[i].Split(delimiter).Select(v => v.Trim()).ToArray();
                     if (values.Length == headers.Length)
                     {
                         dataRows.Add(values);

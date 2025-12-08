@@ -24,5 +24,16 @@
         /// ฟิลด์นี้จำเป็นต้องมีข้อมูลหรือไม่
         /// </summary>
         public required bool IsRequired { get; init; }
+
+        /// <summary>
+        /// รูปแบบวันที่สำหรับ parse ค่าเมื่อฟิลด์เป็นชนิดวันที่ (เช่น 'dd/MM/yyyy', 'yyyy-MM-dd HH:mm:ss')
+        /// ถ้าไม่ระบุ จะไม่พยายาม parse เป็นวันที่
+        /// </summary>
+        public string? FormatDate { get; init; }
+
+        /// <summary>
+        /// ประเภทปี: AD (ค.ศ.), BE (พ.ศ.), AUTO (ตรวจสอบอัตโนมัติ)
+        /// </summary>
+        public string? YearType { get; init; }
     }
 }
