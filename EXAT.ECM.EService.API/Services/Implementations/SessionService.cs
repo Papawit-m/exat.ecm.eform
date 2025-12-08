@@ -99,7 +99,9 @@ namespace EXAT.ECM.EService.API.Services.Implementations
 
         public Task<bool> ClearSessionAsync(string token)
         {
-            if (_sessionsByToken.TryGetValue(token, out var session))
+            _sessionsByToken.TryGetValue(token, out var session);
+
+            if (session!= null)
             {
                 // Remove from both dictionaries
                 if (session.DeviceInfo?.MacAddress != null)

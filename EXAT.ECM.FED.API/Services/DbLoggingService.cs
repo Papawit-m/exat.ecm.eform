@@ -18,8 +18,8 @@ namespace EXAT.ECM.FED.API.Services
         public DbLoggingService(OracleDbContext dbContext, IConfiguration configuration)
         {
             _db = dbContext ;
-            _connectionString = configuration.GetConnectionString("OracleConnection");
-            //_connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
+            //_connectionString = configuration.GetConnectionString("OracleConnection");
+            _connectionString = Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING");
         }
 
         // ============== Public APIs ==============

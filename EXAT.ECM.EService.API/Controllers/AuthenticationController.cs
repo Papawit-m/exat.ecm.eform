@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Http;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Mail;
+using EXAT.ECM.EService.API.DAL;
+using EXAT.ECM.EService.API.Services.Mappers;
 
 namespace EXAT.ECM.EService.API.Controllers
 {
@@ -21,65 +23,109 @@ namespace EXAT.ECM.EService.API.Controllers
         private readonly ILogger<AuthenticationController> _logger;
         private readonly ExatApiSettings _exatSettings;
         private readonly ISessionService _sessionService;
+        private readonly IOracleLoggerService _oracleLogger;
         //private readonly HttpContext httpContext;
 
         public AuthenticationController(
             IExatApiService exatApiService,
             ILogger<AuthenticationController> logger,
             IOptions<ExatApiSettings> exatSettings,
-            ISessionService sessionService
+            ISessionService sessionService, 
+            OracleDbContext oracleContext,
+            IOracleLoggerService oracleLogger
             )
         {
             _exatApiService = exatApiService;
             _sessionService = sessionService;
             _exatSettings = exatSettings.Value;
             _logger = logger;
+            _oracleLogger = oracleLogger;
         }
 
         [HttpPost("access-token")]
-        [ProducesResponseType(typeof(AccessTokenData), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(K2ApiResponse<K2AccessTokenResponse>), 200)]
+        [ProducesResponseType(typeof(K2ErrorResponse), 400)]
+        [ProducesResponseType(typeof(K2ErrorResponse), 500)]
         public async Task<IActionResult> GetAccessToken()
         {
+            var startTime = DateTime.UtcNow;
+            var endpoint = "K2GetAccessToken";
+            var httpMethod = "POST";
+            var requestPath = $"{Request.Path}";
+
+            _logger.LogInformation("Starting K2 GetAccessToken request");
+
+            var request = new AccessTokenRequest
+            {
+                Username = _exatSettings.AccessTokenUsername,
+                Password = _exatSettings.AccessTokenPassword
+            };
+
             try
             {
-                
-                //string AccessTokenUsername = _exatSettings.AccessTokenUsername;
-                //string AccessTokenPassword = _exatSettings.AccessTokenPassword;
-
-                var request = new AccessTokenRequest
-                {
-                    Username = _exatSettings.AccessTokenUsername,
-                    Password = _exatSettings.AccessTokenPassword
-                };
+                              
 
                 if (request == null)
                 {
-                    return BadRequest("Request cannot be null");
+                    _logger.LogWarning("K2 GetAccessToken request failed: Request cannot be null");
+                    await _oracleLogger.LogWarningAsync(endpoint, httpMethod, requestPath, "Request cannot be null", null, null, null, null);
+
+                    var errorResponse = K2ResponseMapper.CreateErrorResponse(
+                        "Request cannot be null",
+                        "INVALID_REQUEST");
+                    return BadRequest(errorResponse);
                 }
 
-                var result = await _exatApiService.GetAccessTokenAsync(request);
+                _logger.LogDebug("K2 GetAccessToken request parameters - Username: {Username}", request.Username);
 
-                                
+                var result = await _exatApiService.GetAccessTokenAsync(request);
+                // Convert to K2 format
+                var k2Response = K2ResponseMapper.MapToK2AccessToken(result);
+
+                var executionTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                _logger.LogDebug("K2 GetAccessToken execution time: {ExecutionTime}ms", executionTime);
+
                 if (result.Success)
                 {
+                    _logger.LogInformation("K2 GetAccessToken completed successfully in {ExecutionTime}ms", executionTime);
+                    await _oracleLogger.LogInformationAsync(
+                        endpoint, httpMethod, requestPath,
+                        "Access token retrieved successfully (K2 format)",
+                        request.Username, null, null, executionTime,
+                        request, k2Response);
+
                     return Ok(new
-                                { result.Success
-                                 ,result.Message
-                                 ,result.AccessToken
-                                 ,result.ExpiredIn
+                                { k2Response.Success
+                                 ,k2Response.Message
+                                 ,k2Response.Data.AccessToken
+                                 ,k2Response.Data.ExpiredIn
                                 }
                         );
                 }
                 else
                 {
-                    return StatusCode(500, result);
+                    _logger.LogWarning("K2 GetAccessToken failed: {Message}", k2Response.Message);
+                    await _oracleLogger.LogWarningAsync(
+                        endpoint, httpMethod, requestPath,
+                        k2Response.Message ?? "Failed to get access token",
+                        request.Username, null, null, request);
+                    return StatusCode(500, k2Response);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetAccessToken endpoint");
-                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+                var executionTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                _logger.LogError(ex, "Error in K2 GetAccessToken endpoint after {ExecutionTime}ms", executionTime);
+                await _oracleLogger.LogErrorAsync(
+                    endpoint, httpMethod, requestPath,
+                    "Error in K2 GetAccessToken endpoint",
+                    ex, request?.Username, null, null, executionTime, request);
+
+                var errorResponse = K2ResponseMapper.CreateErrorResponse(
+                    "Internal server error",
+                    "INTERNAL_ERROR",
+                    ex.Message);
+                return StatusCode(500, errorResponse);
             }
         }
 
@@ -114,12 +160,28 @@ namespace EXAT.ECM.EService.API.Controllers
         [HttpPost("login-with-token")]
         public async Task<IActionResult> LoginWithToken([FromQuery] string? LoginToken)
         {
+            var startTime = DateTime.UtcNow;
+            var endpoint = "K2LoginWithToken";
+            var httpMethod = "POST";
+            var requestPath = $"{Request.Path}";
+
+            _logger.LogInformation("Starting K2 LoginWithToken request");
+
             try
             {
                 if (LoginToken == null )
                 {
+                    _logger.LogWarning("K2 LoginWithToken request failed: Request cannot be null");
+                    await _oracleLogger.LogWarningAsync(endpoint, httpMethod, requestPath, "Request cannot be null", null, null, null, null);
+
+                    var errorResponse = K2ResponseMapper.CreateErrorResponse(
+                        "Request cannot be null",
+                        "INVALID_REQUEST");
+
                     return BadRequest("Login token cannot be null or empty");
                 }
+
+                _logger.LogDebug("K2 LoginWithToken request parameters - LoginToken: ***");
 
                 var request = new LoginTokenRequest
                 {
@@ -138,100 +200,158 @@ namespace EXAT.ECM.EService.API.Controllers
                     Password = _exatSettings.AccessTokenPassword
                 };
 
-               
+                _logger.LogDebug("Requesting access token for K2 LoginWithToken");
                 var accessTokenResult = await _exatApiService.GetAccessTokenAsync(tokenRequest);
 
                 if (!accessTokenResult.Success || string.IsNullOrEmpty(accessTokenResult.Data?.AccessToken))
                 {
-                    return StatusCode(500, new { message = "Failed to get access token", error = accessTokenResult.Message });
+                    var failureMessage = accessTokenResult.Message ?? "Failed to get access token";
+                    _logger.LogWarning("K2 LoginWithToken failed: {Message}", failureMessage);
+                    await _oracleLogger.LogWarningAsync(
+                        endpoint, httpMethod, requestPath,
+                        failureMessage,
+                        null, null, null, request);
+
+                    var errorResponse = K2ResponseMapper.CreateErrorResponse(
+                        failureMessage,
+                        accessTokenResult.ErrorCode ?? "TOKEN_ERROR");
+
+                    return StatusCode(500, errorResponse);
                 }
 
-                var result = await _exatApiService.LoginWithTokenAsync(accessTokenResult.Data.AccessToken, request);
+                var accessToken = accessTokenResult.Data.AccessToken;
 
-                if (!result.Success || result.Data?.LoginData == null)
+                var result = await _exatApiService.LoginWithTokenAsync(accessToken, request);
+
+                // Propagate token expiry if available
+                if (result.Data != null && accessTokenResult.Data != null)
                 {
-                    return StatusCode(500, result);
+                    result.Data.ExpiredIn = accessTokenResult.Data.ExpiredIn;
                 }
 
                 // Get Member by Email if available
-                if (!string.IsNullOrEmpty(result.Data.LoginData.Email))
+                if (result.Data?.LoginData?.Email != null)
                 {
-                    _logger.LogInformation("Fetching member info by email: {Email}", result.Data.LoginData.Email);
+                    _logger.LogInformation("K2 LoginWithToken: Fetching member info by email: {Email}", result.Data.LoginData.Email);
 
-                    var memberByEmailResponse = await _exatApiService.GetMemberByEmailAsync(accessTokenResult.Data.AccessToken, result.Data.LoginData.Email);
-
+                    var memberByEmailResponse = await _exatApiService.GetMemberByEmailAsync(accessToken, result.Data.LoginData.Email);
                     if (memberByEmailResponse.Success && memberByEmailResponse.Data != null)
                     {
                         result.Data.MemberByEmail = memberByEmailResponse.Data;
-                        _logger.LogInformation("Member info by email retrieved successfully");
+                        _logger.LogInformation("K2 LoginWithToken: Member info by email retrieved successfully");
                     }
                     else
                     {
-                        _logger.LogWarning("Failed to get member info by email: {Message}", memberByEmailResponse.Message);
+                        _logger.LogWarning("K2 LoginWithToken: Failed to get member info by email: {Message}", memberByEmailResponse.Message);
                     }
                 }
 
                 // Get Member by Customer ID if available
-                if (!string.IsNullOrEmpty(result.Data.LoginData.CustomerId))
+                if (result.Data?.LoginData?.CustomerId != null)
                 {
-                    _logger.LogInformation("Fetching member info by customer ID: {CustomerId}", result.Data.LoginData.CustomerId);
+                    _logger.LogInformation("K2 LoginWithToken: Fetching member info by customer ID: {CustomerId}", result.Data.LoginData.CustomerId);
 
-                    var memberByIdResponse = await _exatApiService.GetMemberByCustomerIdAsync(accessTokenResult.Data.AccessToken, result.Data.LoginData.CustomerId);
-
+                    var memberByIdResponse = await _exatApiService.GetMemberByCustomerIdAsync(accessToken, result.Data.LoginData.CustomerId);
                     if (memberByIdResponse.Success && memberByIdResponse.Data != null)
                     {
                         result.Data.MemberByCustomerId = memberByIdResponse.Data;
-                        _logger.LogInformation("Member info by customer ID retrieved successfully");
+                        _logger.LogInformation("K2 LoginWithToken: Member info by customer ID retrieved successfully");
                     }
                     else
                     {
-                        _logger.LogWarning("Failed to get member info by customer ID: {Message}", memberByIdResponse.Message);
+                        _logger.LogWarning("K2 LoginWithToken: Failed to get member info by customer ID: {Message}", memberByIdResponse.Message);
                     }
                 }
 
-                return Ok( new {
-                            result.Success
-                            ,result.Message
-                            ,result.Data.LoginData.MemberId
-                            ,result.Data.LoginData.CustomerId
-                            ,result.Data.LoginData.Email
-                            ,result.Data.LoginData.UserType
-                            ,result.Data.LoginData.AccountType
-                            ,result.Data.LoginData.Title
-                            ,result.Data.LoginData.FirstName
-                            ,result.Data.LoginData.LastName
-                            ,result.Data.LoginData.PhoneNo
-                            ,result.Data.LoginData.CreatedAt
-                            ,result.Data.LoginData.CreatedBy
-                            ,result.Data.LoginData.Active
-                            ,result.Data.LoginData.IsConsentLatest
-                            ,result.Data.MemberByCustomerId.DateOfBirth
-                            ,result.Data.MemberByCustomerId.Status     
-                            ,result.Data.MemberByCustomerId.contact_address_house_no
-                            ,result.Data.MemberByCustomerId.contact_address_village_no
-                            ,result.Data.MemberByCustomerId.contact_address_village_name
-                            ,result.Data.MemberByCustomerId.contact_address_road
-                            ,result.Data.MemberByCustomerId.contact_address_lane
-                            ,result.Data.MemberByCustomerId.contact_address_sub_district
-                            ,result.Data.MemberByCustomerId.contact_address_district
-                            ,result.Data.MemberByCustomerId.contact_address_province
-                            ,result.Data.MemberByCustomerId.contact_address_postal_code
-                            ,result.Data.MemberByCustomerId.tax_address_house_no
-                            ,result.Data.MemberByCustomerId.tax_address_village_no
-                            ,result.Data.MemberByCustomerId.tax_address_village_name
-                            ,result.Data.MemberByCustomerId.tax_address_road
-                            ,result.Data.MemberByCustomerId.tax_address_lane
-                            ,result.Data.MemberByCustomerId.tax_address_sub_district
-                            ,result.Data.MemberByCustomerId.tax_address_district
+                // result.Data is LoginResponse, not ApiResponse<LoginResponse>
+                var k2Response = result.Data != null
+                    ? K2ResponseMapper.MapToK2Login(result.Data)
+                    : new K2ApiResponse<K2LoginResponseData>
+                    {
+                        Success = false,
+                        Message = result.Message ?? "Login with token failed",
+                        ErrorCode = result.ErrorCode ?? "LOGIN_FAILED"
+                    };
 
+                var executionTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                _logger.LogDebug("K2 LoginWithToken execution time: {ExecutionTime}ms", executionTime);
 
+                if (k2Response.Success)
+                {
+                    var customerId = k2Response.Data?.LoginData?.CustomerId;
+                    var email = k2Response.Data?.LoginData?.Email;
+
+                    _logger.LogInformation("K2 LoginWithToken completed successfully in {ExecutionTime}ms", executionTime);
+                    await _oracleLogger.LogInformationAsync(
+                        endpoint, httpMethod, requestPath,
+                        "Login with token successful (K2 format)",
+                        null, customerId, email, executionTime,
+                        request, k2Response);
+                    return Ok(new
+                            {
+                                k2Response.Success,
+                                k2Response.Message,
+                                k2Response.Data.LoginData.MemberId,
+                                k2Response.Data.LoginData.CustomerId,
+                                k2Response.Data.LoginData.Email,
+                                k2Response.Data.LoginData.UserType,
+                                k2Response.Data.LoginData.AccountType,
+                                k2Response.Data.LoginData.Title,
+                                k2Response.Data.LoginData.FirstName,
+                                k2Response.Data.LoginData.LastName,
+                                k2Response.Data.LoginData.CreatedAt,
+                                k2Response.Data.LoginData.CreatedBy,
+                                k2Response.Data.LoginData.Active,
+                                k2Response.Data.LoginData.IsConsentLatest,
+                                k2Response.Data.MemberByCustomerId.DateOfBirth,
+                                k2Response.Data.MemberByCustomerId.PhoneNo,
+                                Status = k2Response.Data.MemberByCustomerId.Active,
+                                contact_address_house_no = k2Response.Data.MemberByCustomerId.ContactAddress.HouseNo,
+                                contact_address_village_no = k2Response.Data.MemberByCustomerId.ContactAddress.VillageNo,
+                                contact_address_village_name = k2Response.Data.MemberByCustomerId.ContactAddress.VillageName,
+                                contact_address_road = k2Response.Data.MemberByCustomerId.ContactAddress.Road,
+                                contact_address_lane = k2Response.Data.MemberByCustomerId.ContactAddress.Lane,
+                                contact_address_sub_district = k2Response.Data.MemberByCustomerId.ContactAddress.SubDistrict,
+                                contact_address_district = k2Response.Data.MemberByCustomerId.ContactAddress.District,
+                                contact_address_province = k2Response.Data.MemberByCustomerId.ContactAddress.Province,
+                                contact_address_postal_code = k2Response.Data.MemberByCustomerId.ContactAddress.PostalCode,
+                                tax_address_house_no = k2Response.Data.MemberByCustomerId.TaxAddress.HouseNo,
+                                tax_address_village_no = k2Response.Data.MemberByCustomerId.TaxAddress.VillageNo,
+                                tax_address_village_name = k2Response.Data.MemberByCustomerId.TaxAddress.VillageName,
+                                tax_address_road = k2Response.Data.MemberByCustomerId.TaxAddress.Road,
+                                tax_address_lane = k2Response.Data.MemberByCustomerId.TaxAddress.Lane,
+                                tax_address_sub_district = k2Response.Data.MemberByCustomerId.TaxAddress.SubDistrict,
+                                tax_address_district = k2Response.Data.MemberByCustomerId.TaxAddress.District,
+                                tax_address_province = k2Response.Data.MemberByCustomerId.TaxAddress.Province,
+                                tax_address_postal_code = k2Response.Data.MemberByCustomerId.TaxAddress.PostalCode
+                            }
+                    );
                 }
-                        );
+                else
+                {
+                    _logger.LogWarning("K2 LoginWithToken failed: {Message}", k2Response.Message);
+                    await _oracleLogger.LogWarningAsync(
+                        endpoint, httpMethod, requestPath,
+                        k2Response.Message ?? "Login with token failed",
+                        null, null, null, request);
+                    return StatusCode(500, k2Response);
+                }
+                
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in LoginWithToken endpoint");
-                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+                var executionTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                _logger.LogError(ex, "Error in K2 LoginWithToken endpoint after {ExecutionTime}ms", executionTime);
+                await _oracleLogger.LogErrorAsync(
+                    endpoint, httpMethod, requestPath,
+                    "Error in K2 LoginWithToken endpoint",
+                    ex, null, null, null, executionTime, LoginToken);
+
+                var errorResponse = K2ResponseMapper.CreateErrorResponse(
+                    "Internal server error",
+                    "INTERNAL_ERROR",
+                    ex.Message);
+                return StatusCode(500, errorResponse);
             }
         }
 
@@ -377,6 +497,10 @@ namespace EXAT.ECM.EService.API.Controllers
 
                 // Add server device info to response
                 session.ServerDeviceInfo = serverDeviceInfo;
+                var statusCodesesion = session.IsNewSession ? 0 : 1;
+                var messagesesion = session.IsNewSession
+                                ? "Session token created successfully. Store this token in K2 SmartObject for future requests."
+                                 : "มี session อยู่แล้วและยังไม่หมดอายุ (request ซ้ำ) - Active session already exists. Using existing token.";
 
                 var response = K2Response<SessionTokenResponse>.Success(
                                 session,
@@ -386,8 +510,8 @@ namespace EXAT.ECM.EService.API.Controllers
 
                 return Ok(new
                 {
-                    statusCode = response.StatusCode,
-                    message = response.Message,
+                    statusCode = statusCodesesion,
+                    message = messagesesion,
                     totalRecords = response.TotalRecords,
                     sessionToken = response.Data.SessionToken,
                     expiresAt = response.Data.ExpiresAt,
