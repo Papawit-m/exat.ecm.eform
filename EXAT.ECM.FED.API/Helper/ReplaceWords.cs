@@ -272,7 +272,7 @@ namespace EXAT.ECM.FED.API.Helper
             //    }
             //}
 
-            #region CheckBox
+            #region CheckBox Title Mapping Logic piyanuch.n 2025-12-03
             var titleKeyMap = mergedHeader
                 .Where(k => k.Key.EndsWith("_HTML"))  
                 .ToDictionary(
