@@ -28,13 +28,8 @@ builder.Services.AddScoped<IBatchInsertService, BatchInsertService>();
 // Env var:
 
 builder.Services.AddDbContext<OracleDbContext>(options =>
-<<<<<<< HEAD
-    //options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
-options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
-=======
     options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
 
->>>>>>> b4a977611be1183cc2db9e8d2ca46969d0ae8b70
 // ---------- CORS ----------
 builder.Services.AddCors(options =>
 {
