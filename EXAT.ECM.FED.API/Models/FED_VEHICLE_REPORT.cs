@@ -121,10 +121,10 @@ namespace EXAT.ECM.FED.API.Models
 		public string? MONTH {get;set;}
 		public string? YEAR { get; set; }
         public List<FED_DETAIL_DriverUsageVehicle_REPORT> Detail { get; set; } = new List<FED_DETAIL_DriverUsageVehicle_REPORT>();
-
     }
     public class FED_DETAIL_DriverUsageVehicle_REPORT
     {
+        public string? NO { get; set; }
         public string? DRIVER_NAME {get;set;}
         public string? USAGE_DATE_PERIOD {get;set;}
         public string? LICENSE_PLATE {get;set;}

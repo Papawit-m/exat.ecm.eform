@@ -534,9 +534,11 @@ namespace EXAT.ECM.FED.API.Controllers
                     var data = _fedService.GetDriverUsageVehicleAsync(request);
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
                     var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
+                    var d_detail2 = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail.FirstOrDefault());
                     _logger.LogInformation("Detail JSON: {result}", JsonSerializer.Serialize(d_detail, new JsonSerializerOptions { WriteIndented = true }));
                     replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                     replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.ReplaceNodeText(document, d_detail2);
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
                     document.Save(memoryStream, p_FileName);
                 }

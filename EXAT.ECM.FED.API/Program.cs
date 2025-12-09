@@ -22,12 +22,13 @@ builder.Services.AddScoped<IProgressTrackingService, ProgressTrackingService>();
 builder.Services.AddScoped<IBatchInsertService, BatchInsertService>();
 
 // ---------- DbContext ----------
-//builder.Services.AddDbContext<OracleDbContext>(options =>
-//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+builder.Services.AddDbContext<OracleDbContext>(options =>
+    //options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+
 
 // Env var:
 
-builder.Services.AddDbContext<OracleDbContext>(options =>
+//builder.Services.AddDbContext<OracleDbContext>(options =>
     options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
 
 // ---------- CORS ----------
