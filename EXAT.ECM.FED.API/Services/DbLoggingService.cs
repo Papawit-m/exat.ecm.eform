@@ -41,8 +41,8 @@ namespace EXAT.ECM.FED.API.Services
         {
             try
             {
-                await using var connection = await _db.GetOpenConnectionAsync();
-                await using var command = new Oracle.ManagedDataAccess.Client.OracleCommand(@"INSERT INTO FLEET_CARD_APP_LOGS (LOG_TIMESTAMP, LOG_LEVEL, MESSAGE, STACK_TRACE, CONTEXT_INFO)
+                await using var connection = new OracleConnection(_connectionString);
+                await using var command = new Oracle.ManagedDataAccess.Client.OracleCommand(@"INSERT INTO EFM_FED.FLEET_CARD_APP_LOGS (LOG_TIMESTAMP, LOG_LEVEL, MESSAGE, STACK_TRACE, CONTEXT_INFO)
                     VALUES (SYSTIMESTAMP, :logLevel, :message, NULL, :contextInfo)", connection)
                 {
                     CommandType = System.Data.CommandType.Text
@@ -72,7 +72,8 @@ namespace EXAT.ECM.FED.API.Services
             try
             {
                 // 1) ดึง ADO.NET connection จาก EF Core อย่างถูกต้อง
-                var dbConn = _db.Database.GetDbConnection();
+                //var dbConn = _db.Database.GetDbConnection();
+                using var dbConn = new OracleConnection(_connectionString);
                 if (dbConn is not OracleConnection oraConn)
                 {
                     // กันกรณี provider ไม่ใช่ Oracle
@@ -88,7 +89,7 @@ namespace EXAT.ECM.FED.API.Services
                 cmd.BindByName = true;
                 cmd.CommandType = CommandType.Text;
                 cmd.CommandText =
-                    @"INSERT INTO FLEET_CARD_APP_LOGS
+                    @"INSERT INTO EFM_FED.FLEET_CARD_APP_LOGS
                         (LOG_TIMESTAMP, LOG_LEVEL, MESSAGE, STACK_TRACE, CONTEXT_INFO)
                       VALUES
                         (SYSTIMESTAMP, :logLevel, :message, :stackTrace, :contextInfo)";

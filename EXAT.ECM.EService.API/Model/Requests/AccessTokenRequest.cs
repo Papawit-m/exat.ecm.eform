@@ -1,4 +1,6 @@
-﻿namespace EXAT.ECM.EService.API.Model.Requests
+﻿using System.Text.Json.Serialization;
+
+namespace EXAT.ECM.EService.API.Model.Requests
 {
     public class AccessTokenRequest
     {
@@ -14,6 +16,7 @@
 
     public class LoginTokenRequest
     {
+        [JsonPropertyName("login_token")]
         public string? LoginToken { get; set; }
     }
 }

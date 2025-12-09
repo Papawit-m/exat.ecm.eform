@@ -41,13 +41,18 @@ namespace EXAT.ECM.FED.API.Services
             string? headerId = null,
             string templateName = "TEXT_TEMPLATE")
         {
-            using var conn = await _oracleContext.GetOpenConnectionAsync();
+            //using var conn = await _oracleContext.GetOpenConnectionAsync();
+            using var conn = new OracleConnection(_connectionString);
+            if (conn.State != ConnectionState.Open)
+            {
+                await conn.OpenAsync();
+            }
             int inserted = 0;
             int failed = 0;
             var errors = new List<object>();
 
             // Load table columns once
-            var validColumns = await GetTableColumnsAsync(conn, tableName);
+            var validColumns = await GetTableColumnsAsync(tableName);
             var headerCols = headers.Where(h => validColumns.Contains(h.ToUpperInvariant())).ToList();
 
             // Metadata columns
@@ -80,8 +85,9 @@ namespace EXAT.ECM.FED.API.Services
             // Prepare batch data
             foreach (var col in allCols)
             {
-                var paramName = ":" + col;
-                paramNames.Add(paramName);
+                string paramName = col;           // parameter name without :
+                string bindName = ":" + col;      // bind variable
+                paramNames.Add(bindName);
 
                 object[] values = new object[batch.Count];
                 for (int i = 0; i < batch.Count; i++)
@@ -105,8 +111,21 @@ namespace EXAT.ECM.FED.API.Services
             // Bind arrays
             foreach (var kvp in batchData)
             {
-                var param = new OracleParameter(kvp.Key, OracleDbType.Varchar2);
-                param.Value = kvp.Value;
+                string col = kvp.Key;
+                object[] values = kvp.Value;
+
+                OracleDbType dbType = OracleDbType.Varchar2;
+
+                if (col == "FILE_SIZE")
+                    dbType = OracleDbType.Decimal;
+                else if (col == "FILE_CREATED_DATE" || col == "FILE_LAST_MODIFIED_DATE")
+                    dbType = OracleDbType.Date;
+
+                var param = new OracleParameter(col, dbType)
+                {
+                    Value = values
+                };
+
                 cmd.Parameters.Add(param);
             }
 
@@ -148,19 +167,95 @@ namespace EXAT.ECM.FED.API.Services
             return (inserted, failed, errors);
         }
 
-        private async Task<HashSet<string>> GetTableColumnsAsync(IDbConnection conn, string tableName)
+        //private async Task<HashSet<string>> GetTableColumnsAsync( string tableName)
+        //{
+        //    var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        //    using var connection = new OracleConnection(_connectionString);
+        //    if (connection.State != ConnectionState.Open)
+        //    {
+        //        await connection.OpenAsync(); 
+        //    }
+
+        //    using var cmd = connection.CreateCommand();
+
+        //    cmd.CommandText = @"SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = :t";
+
+        //    var param = cmd.CreateParameter();
+        //    param.ParameterName = "t";
+        //    param.Value = tableName.ToUpperInvariant();
+        //    cmd.Parameters.Add(param);
+
+        //    using var reader = await cmd.ExecuteReaderAsync();
+
+
+
+        //    while (await reader.ReadAsync())
+        //    {
+        //        columns.Add(reader.GetString(0));
+        //    }
+        //    return columns;
+        //}
+
+        private async Task<HashSet<string>> GetTableColumnsAsync(string tableName)
         {
             var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            using var cmd = (OracleCommand)conn.CreateCommand();
-            cmd.CommandText = "SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = :t";
-            var param = new OracleParameter(":t", tableName.ToUpperInvariant());
-            cmd.Parameters.Add(param);
+
+            // แยก schema กับ table
+            string? owner = null;
+            string pureTableName = tableName;
+
+            var parts = tableName.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                owner = parts[0].ToUpperInvariant();        // EFM_FED
+                pureTableName = parts[1].ToUpperInvariant(); // FLEET_CARD_TEMP_TRANS_TEXT
+            }
+            else
+            {
+                pureTableName = tableName.ToUpperInvariant();
+            }
+
+            using var connection = new OracleConnection(_connectionString);
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.BindByName = true;
+
+            if (owner != null)
+            {
+                // ถ้ามี schema → ใช้ ALL_TAB_COLUMNS + OWNER
+                cmd.CommandText = @"
+            SELECT COLUMN_NAME 
+            FROM ALL_TAB_COLUMNS 
+            WHERE OWNER = :owner 
+              AND TABLE_NAME = :t";
+
+                var ownerParam = cmd.CreateParameter();
+                ownerParam.ParameterName = "owner";
+                ownerParam.Value = owner;
+                cmd.Parameters.Add(ownerParam);
+            }
+            else
+            {
+                // ถ้าไม่มี schema → ใช้ USER_TAB_COLUMNS ของ user ปัจจุบัน
+                cmd.CommandText = @"
+            SELECT COLUMN_NAME 
+            FROM USER_TAB_COLUMNS 
+            WHERE TABLE_NAME = :t";
+            }
+
+            var tableParam = cmd.CreateParameter();
+            tableParam.ParameterName = "t";
+            tableParam.Value = pureTableName;
+            cmd.Parameters.Add(tableParam);
 
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 columns.Add(reader.GetString(0));
             }
+
             return columns;
         }
 

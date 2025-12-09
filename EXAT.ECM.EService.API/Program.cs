@@ -5,6 +5,7 @@ using EXAT.ECM.EService.API.Model.Configuration;
 using EXAT.ECM.EService.API.Services.Implementations;
 using EXAT.ECM.EService.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,11 +16,43 @@ builder.Services.AddControllers();
 // Register LoggingHttpClientHandler
 builder.Services.AddTransient<LoggingHttpClientHandler>();
 
+// Register Oracle Logger Service
+builder.Services.AddScoped<IOracleLoggerService, OracleLoggerService>();
+
 // Configure EXAT API settings
 builder.Services.Configure<ExatApiSettings>(builder.Configuration.GetSection(ExatApiSettings.SectionName));
 
-builder.Services.AddScoped<IAccessSessionService, AccessSessionService>();
-builder.Services.AddScoped<ISessionService, SessionService>();
+//builder.Services.AddScoped<IAccessSessionService, AccessSessionService>();
+//builder.Services.AddScoped<ISessionService, SessionService>();
+
+// Register AES Encryption Service
+builder.Services.AddSingleton<IEncryptionService>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var settings = configuration.GetSection(ExatApiSettings.SectionName).Get<ExatApiSettings>();
+    var logger = provider.GetRequiredService<ILogger<IEncryptionService>>();
+
+    if (settings == null)
+    {
+        logger.LogError("❌ ExatApiSettings is null! Using NoOpEncryptionService as fallback.");
+        return new NoOpEncryptionService(provider.GetRequiredService<ILogger<NoOpEncryptionService>>());
+    }
+
+    if (settings.UseEncryption)
+    {
+        var aesLogger = provider.GetRequiredService<ILogger<AesEncryptionService>>();
+        logger.LogInformation("🔐 AES Encryption Service enabled (Production mode)");
+        return new AesEncryptionService(settings.AesSecretKey, settings.AesSecretIvKey, aesLogger);
+    }
+    else
+    {
+        var noOpLogger = provider.GetRequiredService<ILogger<NoOpEncryptionService>>();
+        logger.LogInformation("🔓 AES Encryption Service disabled (UAT mode)");
+        return new NoOpEncryptionService(noOpLogger);
+    }
+});
+
+builder.Services.AddSingleton<ISessionService, SessionService>();
 
 //builder.Services.AddDbContext<OracleDbContext>(options =>
 //    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
@@ -27,6 +60,15 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddDbContext<OracleDbContext>(options =>
         options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
 
+builder.Services.Configure<TFMNotiSettings>(builder.Configuration.GetSection("TFMNoti"));
+
+builder.Services.AddHttpClient<INotificationService, NotificationService>((sp, client) =>
+{
+    var settings = sp.GetRequiredService<IOptions<TFMNotiSettings>>().Value;
+
+    client.BaseAddress = new Uri(settings.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+});
 // Add HttpClient for EXAT API service with logging
 
 builder.Services.AddHttpClient<IExatApiService, ExatApiService>(client =>

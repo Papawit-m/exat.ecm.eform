@@ -28,8 +28,13 @@ builder.Services.AddScoped<IBatchInsertService, BatchInsertService>();
 // Env var:
 
 builder.Services.AddDbContext<OracleDbContext>(options =>
+<<<<<<< HEAD
     //options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
 options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+=======
+    options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING")));
+
+>>>>>>> b4a977611be1183cc2db9e8d2ca46969d0ae8b70
 // ---------- CORS ----------
 builder.Services.AddCors(options =>
 {
@@ -45,7 +50,15 @@ builder.Services.AddCors(options =>
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 // ---------- MVC / Swagger ----------
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // รองรับภาษาไทยและ Unicode ทุกภาษา - ไม่ escape Unicode characters
+        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        // เพิ่ม options อื่นๆ ถ้าต้องการ
+        options.JsonSerializerOptions.WriteIndented = false; // compact JSON
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
