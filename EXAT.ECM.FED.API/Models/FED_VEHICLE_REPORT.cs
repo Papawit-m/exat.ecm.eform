@@ -138,6 +138,7 @@ namespace EXAT.ECM.FED.API.Models
     {
         public string? USAGE_DATE { get; set; }
         public string? LICENSE_PLATE { get; set; }
+
         public string? REFUEL_PER_HOURS { get; set; }
         public string? CONTROLLER_SIGN_1 { get; set; }
         public string? CONTROLLER_SIGN_2 { get; set; }
@@ -145,6 +146,10 @@ namespace EXAT.ECM.FED.API.Models
         public string? DRIVER_SIGN_1 { get; set; }
         public string? DRIVER_SIGN_2 { get; set; }
         public string? DRIVER_POSITION { get; set; }
+        public string? TOTAL_HOURS {get;set;}
+        public string? TOTAL_MINUTES {get;set;}
+        public string? TOTAL_MILEAGE {get;set;}
+        public string? TOTAL_FUEL { get; set; }
         public List<FED_DETAIL_MachineUse_REPORT> Detail { get; set; } = new List<FED_DETAIL_MachineUse_REPORT>();
     }
     public class FED_DETAIL_MachineUse_REPORT
@@ -162,10 +167,10 @@ namespace EXAT.ECM.FED.API.Models
         public string? SUM_MILEAGE { get; set; }
         public string? SUM_FUEL { get; set; }
         public string? REQUEST_NAME { get; set; }
-        public string? TOTAL_HOURS { get; set; }
-        public string? TOTAL_MINUTES { get; set; }
-        public string? TOTAL_MILEAGE { get; set; }
-        public string? TOTAL_FUEL { get; set; }
+        //public string? TOTAL_HOURS { get; set; }
+        //public string? TOTAL_MINUTES { get; set; }
+        //public string? TOTAL_MILEAGE { get; set; }
+        //public string? TOTAL_FUEL { get; set; }
 
     }
     public class FED_Header_FUEL_FLEET_CARD_BANK
