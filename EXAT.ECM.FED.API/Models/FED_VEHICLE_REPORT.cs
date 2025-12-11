@@ -180,7 +180,15 @@ namespace EXAT.ECM.FED.API.Models
         public string? GRAND_TOTAL_AMT { get; set; }
         public string? TOTAL_VOLUME_LITERS { get; set; }
         public string? TOTAL_PRICE_PER_LITER { get; set; }
+        public FED_DATA_FUEL_FLEET_CARD_BANK header_data { get; set; } = new FED_DATA_FUEL_FLEET_CARD_BANK();
         public List<FED_DETAIL_FUEL_FLEET_CARD_BANK> Detail { get; set; } = new List<FED_DETAIL_FUEL_FLEET_CARD_BANK>();
+    }
+    public class FED_DATA_FUEL_FLEET_CARD_BANK
+    {
+        public string? DEP_NAME {get;set;}
+        public string? LICENSE_PLATE {get;set;}
+        public string? DATE_FROM {get;set;}
+        public string? DATE_TO { get; set; }
     }
     public class FED_DETAIL_FUEL_FLEET_CARD_BANK
     {

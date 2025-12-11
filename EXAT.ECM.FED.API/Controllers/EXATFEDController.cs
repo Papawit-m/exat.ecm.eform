@@ -467,9 +467,11 @@ namespace EXAT.ECM.FED.API.Controllers
                     //// get data from oracle
                     var data = _fedService.GetFuelFleetCardBank(request);
                     var d_header = data.Result == null ? null : replacWords.ConvertDataToReplaceObject(data.Result);
+                    var d_header_data = data.Result?.header_data == null ? null : replacWords.ConvertDataToReplaceObject(data.Result?.header_data);
                     var d_detail = data.Result?.Detail == null ? null : replacWords.ConvertDataToReplaceObject(data.Result.Detail);
                     replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                     replacWords.ReplaceNodeText(document, d_header);
+                    replacWords.ReplaceNodeText(document, d_header_data);
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
 
                     document.Save(memoryStream, p_FileName);

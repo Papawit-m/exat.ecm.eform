@@ -39,6 +39,7 @@ namespace EXAT.ECM.FED.API.DAL
             modelBuilder.Entity<DETAIL2_FuelFleetCard>().HasNoKey();
 
             modelBuilder.Entity<FED_DETAIL_FUEL_FLEET_CARD_BANK>().HasNoKey();
+            modelBuilder.Entity<FED_DATA_FUEL_FLEET_CARD_BANK>().HasNoKey();
             modelBuilder.Entity<FED_HEADER_VEHICLEHANDOVER>().HasNoKey();
             modelBuilder.Entity<FED_HEADER_VEHICLEREPAIRREQUEST>().HasNoKey();
             modelBuilder.Entity<FED_HEADER_INSPT_EQUIPMNT>().HasNoKey();

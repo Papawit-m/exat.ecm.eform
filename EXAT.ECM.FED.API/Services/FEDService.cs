@@ -1019,6 +1019,7 @@ namespace EXAT.ECM.FED.API.Services
                     StatusCode = "200"
                 };
                 _logger.LogInformation("Calling Oracle ");
+                var header = await GetDATAFuelFleetCardBank(request);
                 var detail = await GetDetailFuelFleetCardBank(request);
                 var first = detail.FirstOrDefault();
                 result = new FED_Header_FUEL_FLEET_CARD_BANK
@@ -1028,7 +1029,8 @@ namespace EXAT.ECM.FED.API.Services
                     GRAND_TOTAL_AMT = first.GRAND_TOTAL_AMT,
                     TOTAL_VOLUME_LITERS = first.TOTAL_VOLUME_LITERS,
                     TOTAL_PRICE_PER_LITER = first.TOTAL_PRICE_PER_LITER,
-                    Detail = detail
+                    Detail = detail,
+                    header_data = header.FirstOrDefault()
                 };
                 return result;
             }
@@ -1041,6 +1043,48 @@ namespace EXAT.ECM.FED.API.Services
                 //    StatusCode = "500",
                 //    Message = "An error occurred while processing your request."
                 //};
+                return null;
+            }
+        }
+        public async Task<List<FED_DATA_FUEL_FLEET_CARD_BANK>> GetDATAFuelFleetCardBank(FEDParameterModel request)
+        {
+            try
+            {
+                var dateFrom = string.IsNullOrEmpty(request.p_DATE_FROM)
+                ? (object)DBNull.Value
+                : DateTime.ParseExact(request.p_DATE_FROM, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+
+                var dateTo = string.IsNullOrEmpty(request.p_DATE_TO)
+                    ? (object)DBNull.Value
+                    : DateTime.ParseExact(request.p_DATE_TO, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+                var result = await _oracleContext
+                   .Set<FED_DATA_FUEL_FLEET_CARD_BANK>()
+                  .FromSqlRaw(@"
+                                    BEGIN 
+                                        EFM_FED.SP_7406_GETDATA_FLEETCARD_BANK (
+                                            :p_ORG_CODE,
+                                            :p_VEHICLE_ID,
+                                            :p_MONTH_NO,
+                                            :p_YEAR,
+                                            :p_DATE_FROM,
+                                            :p_DATE_TO,
+	                                        :p_OUTDATA
+                                        );
+                                    END;",
+                   new OracleParameter("p_ORG_CODE", request.p_ORG_CODE ?? (object)DBNull.Value),
+                   new OracleParameter("p_VEHICLE_ID", request.p_VEHICLE_ID ?? (object)DBNull.Value),
+                   new OracleParameter("p_MONTH_NO", request.p_MONTH_NO ?? (object)DBNull.Value),
+                   new OracleParameter("p_YEAR", request.p_YEAR ?? (object)DBNull.Value),
+                   new OracleParameter("p_DATE_FROM", OracleDbType.Date) { Value = dateFrom },
+                   new OracleParameter("p_DATE_TO", OracleDbType.Date) { Value = dateTo },
+                   new OracleParameter("p_OUTDATA", OracleDbType.RefCursor) { Direction = ParameterDirection.Output }
+               )
+               .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching and joining data.");
                 return null;
             }
         }
