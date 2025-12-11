@@ -142,7 +142,13 @@ namespace EXAT.ECM.FED.API.Services
                 var header = await GetHeaderDailyVehiUsageAsync(request);
                 var detail = await GetDetailDailyVehiUsageAsync(request);
 
-                result = header.FirstOrDefault();
+                var headerItem = header?.FirstOrDefault();
+
+                if (headerItem != null)
+                {
+                    result = headerItem;
+                }
+
                 result.Detail = detail;
 
                 // Log หลังจากได้รับข้อมูลจาก Oracle

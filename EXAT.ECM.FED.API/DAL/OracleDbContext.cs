@@ -15,6 +15,8 @@ namespace EXAT.ECM.FED.API.DAL
         {
             #region Mapping Model
             modelBuilder.Entity<FED_VEHICLE_REPORT>().HasNoKey();
+            modelBuilder.Entity<FUELEXPENSEREQ>().HasNoKey(); 
+            modelBuilder.Entity<DETAIL_FUELEXPENSEREQ>().HasNoKey();
             modelBuilder.Entity<FED_HEADER_DAILYVEHIUSE_REPORT>().HasNoKey();
             modelBuilder.Entity<FED_DETAIL_DAILYVEHIUSE_REPORT>().HasNoKey();
 
