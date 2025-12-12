@@ -13,7 +13,9 @@ builder.Services.Configure<AsposeOption>(builder.Configuration.GetSection(Aspose
 builder.Services.AddScoped<ILCIService, LCIService>();
 
 //builder.Services.AddDbContext<OracleDbContext>(options =>
-//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection")));
+//    options.UseOracle(builder.Configuration.GetConnectionString("OracleConnection"))
+//    );
+
 builder.Services.AddDbContext<OracleDbContext>(options =>
         options.UseOracle(Environment.GetEnvironmentVariable("ORACLE_CONNECTION_STRING"))
     );

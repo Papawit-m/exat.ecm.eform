@@ -494,7 +494,7 @@ namespace EXAT.ECM.FED.API.Controllers
                     replacWords.ReplaceNodeDataRow(document, "bmDataRow", d_detail);
                     replacWords.ReplaceNodeText(document, d_header);
                     replacWords.RemoveRowWithSpecificBookmark(document, "bmDataRow");
-
+                    replacWords.ReplaceNodeText(document, d_detail);
                     document.Save(memoryStream, p_FileName);
                 }
                 if (p_Template == "MonthlyVehiuseTemplate")

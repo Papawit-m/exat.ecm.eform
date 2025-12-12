@@ -62,6 +62,11 @@ builder.Services.AddDbContext<OracleDbContext>(options =>
 
 builder.Services.Configure<TFMNotiSettings>(builder.Configuration.GetSection("TFMNoti"));
 
+builder.Services.Configure<ThaiEpassApiSettings>(builder.Configuration.GetSection("ThaiEpassApi"));
+builder.Services.AddHttpClient<IThaiEpassAuthService, ThaiEpassAuthService>();
+builder.Services.AddHttpClient<ITagUsageService, TagUsageService>(); 
+builder.Services.AddHttpClient<ICustomerSearchService, CustomerSearchService>();
+
 builder.Services.AddHttpClient<INotificationService, NotificationService>((sp, client) =>
 {
     var settings = sp.GetRequiredService<IOptions<TFMNotiSettings>>().Value;
